@@ -193,9 +193,10 @@
       })
     );
     root.querySelectorAll('[data-testid="message-btn"]').forEach((b) =>
-      b.addEventListener("click", () =>
-        window.UI.toast("Mensagens diretas chegam na Fase 2.", { type: "info", title: "Em breve" })
-      )
+      b.addEventListener("click", () => {
+        window.Store.getOrCreateConversation(user.id);
+        location.hash = `#/messages/${user.id}`;
+      })
     );
     root.querySelectorAll('[data-testid="share-profile-btn"]').forEach((b) =>
       b.addEventListener("click", () => {

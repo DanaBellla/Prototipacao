@@ -18,16 +18,19 @@
     const nav = [
       { key: "feed", href: "#/feed", icon: "ph-house", label: "Início" },
       { key: "explore", href: "#/explore", icon: "ph-compass", label: "Explorar" },
-      { key: "events", href: "#/explore", icon: "ph-calendar-star", label: "Eventos" },
-      { key: "messages", href: "#/feed", icon: "ph-chat-circle-dots", label: "Mensagens" },
-      { key: "notifications", href: "#/feed", icon: "ph-bell", label: "Notificações" },
+      { key: "calendar", href: "#/calendar", icon: "ph-calendar-star", label: "Cronograma" },
+      { key: "tickets", href: "#/tickets", icon: "ph-ticket", label: "Meus Ingressos" },
+      { key: "messages", href: "#/messages", icon: "ph-chat-circle-dots", label: "Mensagens" },
+      { key: "notifications", href: "#/notifications", icon: "ph-bell", label: "Notificações" },
       { key: "profile", href: `#/profile/${u.id}`, icon: "ph-user-circle", label: "Perfil" },
     ];
 
     const bottom = [
-      { key: "feed", href: "#/feed", icon: "ph-house" },
-      { key: "explore", href: "#/explore", icon: "ph-compass" },
-      { key: "profile", href: `#/profile/${u.id}`, icon: "ph-user-circle" },
+      { key: "feed", href: "#/feed", icon: "ph-house", label: "Início" },
+      { key: "explore", href: "#/explore", icon: "ph-compass", label: "Explorar" },
+      { key: "calendar", href: "#/calendar", icon: "ph-calendar-star", label: "Agenda" },
+      { key: "messages", href: "#/messages", icon: "ph-chat-circle-dots", label: "Mensagens" },
+      { key: "profile", href: `#/profile/${u.id}`, icon: "ph-user-circle", label: "Perfil" },
     ];
 
     return `
@@ -69,8 +72,8 @@
               <input placeholder="Buscar músicos, casas, eventos, cidades..." data-testid="global-search-input" />
             </div>
             <div class="header-actions">
-              <button class="btn-icon" aria-label="Notificações" data-testid="header-notifications-btn"><i class="ph ph-bell"></i></button>
-              <button class="btn-icon" aria-label="Mensagens" data-testid="header-messages-btn"><i class="ph ph-chat-circle-dots"></i></button>
+              <button class="btn-icon" aria-label="Notificações" data-testid="header-notifications-btn" onclick="location.hash='#/notifications'"><i class="ph ph-bell"></i></button>
+              <button class="btn-icon" aria-label="Mensagens" data-testid="header-messages-btn" onclick="location.hash='#/messages'"><i class="ph ph-chat-circle-dots"></i></button>
             </div>
           </header>
           <div class="main-body">${mainContent}</div>
@@ -82,7 +85,7 @@
           ${bottom.map((b) => `
             <a href="${b.href}" class="${activeKey === b.key ? "active" : ""}" data-testid="bottom-${b.key}">
               <i class="ph ${b.icon}"></i>
-              <span>${b.key === "feed" ? "Início" : b.key === "explore" ? "Explorar" : "Perfil"}</span>
+              <span>${b.label}</span>
             </a>
           `).join("")}
         </nav>

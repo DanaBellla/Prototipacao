@@ -1,0 +1,33 @@
+{
+  "summary": "End-to-end frontend testing of BandaConnection (Vanilla HTML/CSS/JS). Verified reported bug (cadastro nao funcionava) is FIXED for all 3 roles. Validated Fase 2 features: Calendar, Tickets/Checkout, Messages, Notifications, Theme toggle, and Profile CTAs. All critical flows pass.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Calendar (#/calendar)",
+        "issues": [
+          "Seed events are hardcoded to 'DD FEV/MAR' without a year. calendar.js resolves them using new Date().getFullYear() (2026). Since real system date at test time was JULY/2026, the default month view is empty and requires users to click 'Prev' 5x to reach FEV/2026 to see the 5 seed events. Recommendation: either bump seed events forward relative to today (e.g. next month) or set state.cursor to earliest event month on first load so newcomers see content immediately."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional/UX) Make Calendar auto-focus the earliest month with seed events on first render, OR shift seed events to future dates relative to now, so the default 'Cronograma' view is not empty."
+  ],
+  "critical_code_review_comments": [
+    "router.js: pattern matching via regex works correctly for /register/:role, /profile/:id, /checkout/:eventId, /messages/:userId. Root cause of the reported 'cadastro nao funciona' bug (router not passing params) is resolved.",
+    "store.js register(): correctly checks email uniqueness (case-insensitive), builds user object, auto-logs-in via currentUserId. All 3 roles (musician/venue/listener) verified.",
+    "calendar.js eventDate() uses current year for all seed events. Consider adding explicit year field on events or a smarter cursor initializer."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (frontend-only test)", "frontend": "100%" },
+  "test_credentials": "luna@sonora.app / sonora123 (Musico) — used for login flow; new accounts created: testmus@sonora.app, testbar@sonora.app, testlst@sonora.app (all senha123).",
+  "seed_data_creation": "Cleared LocalStorage before each block. Created 3 test users during registration flow tests, then cleared again for login flow.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "App is Vanilla JS with hash routing. Always start tests with localStorage.clear() + reload. URL: https://live-music-hub-16.preview.emergentagent.com. Seed events sit in Feb/Mar of current year — if system date has moved past March, use cal-prev-btn to reach the seed months before validating calendar cells. Messages send + LocalStorage-based auto-reply (setTimeout ~1.4-2.6s) works. QR code renders via api.qrserver.com (external CDN, no key). Theme toggle located inside sidebar user-card area.",
+  "rca of the issue": "Reported bug: 'cadastro nao funcionava'. Verified fix: router.js now compiles patterns like /register/:role into regex and forwards params to V.register(app, params). All three registration flows (musician, venue, listener) create the user, auto-login, redirect to #/feed, and show sidebar with user card. Duplicate-email guard also returns 'Este e-mail ja esta cadastrado.' as expected."
+}

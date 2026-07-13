@@ -1,16 +1,25 @@
-/* Sonora — Hash-based router. */
+/* BandaConnection — Hash-based router with pattern matching. */
 (function () {
-  const routes = {};
+  const routes = []; // ordered list of { pattern, keys, render }
 
-  function on(path, render) {
-    routes[path] = render;
+  function compile(pattern) {
+    const keys = [];
+    // Escape and convert :name -> ([^/]+)
+    const regex =
+      "^" +
+      pattern
+        .replace(/[.+*?^${}()|[\]\\]/g, "\\$&")
+        .replace(/\/:([A-Za-z_][A-Za-z0-9_]*)/g, (_, k) => {
+          keys.push(k);
+          return "/([^/]+)";
+        }) +
+      "$";
+    return { regex: new RegExp(regex), keys };
   }
 
-  function parse() {
-    const raw = location.hash.replace(/^#/, "") || "/";
-    // Support /profile/:id
-    const parts = raw.split("/").filter(Boolean);
-    return { raw, parts };
+  function on(pattern, render) {
+    const { regex, keys } = compile(pattern);
+    routes.push({ pattern, regex, keys, render });
   }
 
   function navigate(hash) {
@@ -19,30 +28,24 @@
   }
 
   function resolve() {
-    const { raw, parts } = parse();
+    const raw = location.hash.replace(/^#/, "") || "/";
     const app = document.getElementById("app");
     if (!app) return;
-    // Reset scroll
     window.scrollTo({ top: 0 });
 
-    // Direct match
-    if (routes[raw]) {
-      routes[raw](app);
-      return;
+    for (const r of routes) {
+      const m = raw.match(r.regex);
+      if (m) {
+        const params = {};
+        r.keys.forEach((k, i) => (params[k] = decodeURIComponent(m[i + 1])));
+        r.render(app, params);
+        return;
+      }
     }
-    // Pattern match for /profile/:id
-    if (parts[0] === "profile" && parts[1]) {
-      routes["/profile/:id"] && routes["/profile/:id"](app, { id: parts[1] });
-      return;
-    }
-    if (parts[0] === "register") {
-      routes["/register"] && routes["/register"](app, { role: parts[1] });
-      return;
-    }
-    // Fallback
-    (routes["/"] || function () {})(app);
+    // Fallback to first ("/") route
+    if (routes[0]) routes[0].render(app, {});
   }
 
-  window.Router = { on, resolve, navigate };
+  window.Router = { on, navigate, resolve };
   window.addEventListener("hashchange", resolve);
 })();

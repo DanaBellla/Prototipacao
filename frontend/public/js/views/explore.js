@@ -93,7 +93,7 @@
                   <div class="meta"><i class="ph ph-map-pin"></i> ${esc(e.venue)}, ${esc(e.city)}</div>
                   <div class="foot">
                     <span class="price">R$ ${e.price},00</span>
-                    <button class="btn btn-outline btn-sm" data-testid="event-details-${e.id}">Ver detalhes</button>
+                    <button class="btn btn-primary btn-sm" data-buy-event="${e.id}" data-testid="event-buy-${e.id}">Comprar ingresso</button>
                   </div>
                 </div>
               </article>
@@ -126,9 +126,19 @@
       })
     );
 
-    // Event card click -> modal
+    // Event card click -> modal (avoid inner buttons)
     root.querySelectorAll("[data-event-id]").forEach((card) =>
-      card.addEventListener("click", () => openEventModal(card.dataset.eventId))
+      card.addEventListener("click", (e) => {
+        if (e.target.closest("[data-buy-event]")) return;
+        openEventModal(card.dataset.eventId);
+      })
+    );
+    // Direct buy buttons
+    root.querySelectorAll("[data-buy-event]").forEach((b) =>
+      b.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        location.hash = `#/checkout/${b.dataset.buyEvent}`;
+      })
     );
     root.querySelectorAll("[data-nav-event]").forEach((n) =>
       n.addEventListener("click", () => openEventModal(n.dataset.navEvent))
@@ -163,17 +173,19 @@
       actions: [
         { label: "Fechar", variant: "btn-ghost", testId: "event-modal-close-btn" },
         {
-          label: "Comprar ingresso (em breve)",
+          label: "Comprar ingresso",
           variant: "btn-primary",
           testId: "event-modal-buy-btn",
           onClick: (close) => {
-            window.UI.toast("Compra de ingressos chega na Fase 2.", { type: "info", title: "Em breve" });
             close();
+            location.hash = `#/checkout/${e.id}`;
           },
         },
       ],
     });
   }
+  // Expose for calendar view
+  window.openEventModal = openEventModal;
 
   window.Views = window.Views || {};
   window.Views.explore = renderExplore;

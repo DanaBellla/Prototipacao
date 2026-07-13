@@ -1,16 +1,13 @@
-/* Sonora — Local state store with LocalStorage persistence.
- * Everything is prototype/simulation — no backend needed for Phase 1. */
+/* BandaConnection — Local state store with LocalStorage persistence. */
 (function () {
-  const KEY = "sonora_state_v1";
+  const KEY = "sonora_state_v2";
 
   function loadState() {
     try {
       const raw = localStorage.getItem(KEY);
       if (!raw) return null;
       return JSON.parse(raw);
-    } catch (_) {
-      return null;
-    }
+    } catch (_) { return null; }
   }
 
   function persist() {
@@ -21,6 +18,10 @@
         events: state.events,
         likes: state.likes,
         follows: state.follows,
+        conversations: state.conversations,
+        tickets: state.tickets,
+        notifications: state.notifications,
+        proposals: state.proposals,
         currentUserId: state.currentUserId,
         theme: state.theme,
       }));
@@ -30,20 +31,74 @@
   const seed = window.SONORA_SEED;
   const stored = loadState();
 
-  const state = stored || {
+  const defaults = {
     users: seed.users,
     posts: seed.posts,
     events: seed.events,
-    trends: seed.trends,
-    likes: {}, // { postId: [userId, ...] }
-    follows: {}, // { userId: [followerId, ...] }
+    likes: {},
+    follows: {},
+    conversations: seedConversations(),
+    tickets: [],
+    notifications: seedNotifications(),
+    proposals: [],
     currentUserId: null,
     theme: "dark",
   };
-  // Trends are static (from seed) — not persisted
-  state.trends = seed.trends;
 
-  const store = {
+  const state = stored || defaults;
+  // Non-persistent seed additions
+  state.trends = seed.trends;
+  // Ensure new fields exist for older localstorage
+  ["conversations", "tickets", "notifications", "proposals"].forEach((k) => {
+    if (!state[k]) state[k] = defaults[k];
+  });
+
+  function seedConversations() {
+    // Threads between u1 (Luna), u3 (Aurora), u2 (Kaio), u4 (Natura)
+    return [
+      {
+        id: "c1",
+        participants: ["u1", "u3"],
+        messages: [
+          { from: "u3", text: "Oi Luna! Vamos fechar a sexta?", time: hoursAgo(30) },
+          { from: "u1", text: "Vamos sim! Que horas começa?", time: hoursAgo(28) },
+          { from: "u3", text: "21h. Passamos o cachê e a estrutura em seguida.", time: hoursAgo(27) },
+          { from: "u1", text: "Perfeito 🎶", time: hoursAgo(2) },
+        ],
+      },
+      {
+        id: "c2",
+        participants: ["u1", "u4"],
+        messages: [
+          { from: "u4", text: "Luna, quer abrir a noite de MPB dia 8?", time: hoursAgo(72) },
+          { from: "u1", text: "Adoraria! Me manda a proposta formal.", time: hoursAgo(70) },
+        ],
+      },
+      {
+        id: "c3",
+        participants: ["u3", "u2"],
+        messages: [
+          { from: "u3", text: "Kaio, tem sábado 24?", time: hoursAgo(5) },
+        ],
+      },
+    ];
+  }
+  function seedNotifications() {
+    return [
+      { id: "n1", type: "like", from: "u3", target: "p1", time: hoursAgo(1), read: false, forUserId: "u1" },
+      { id: "n2", type: "proposal", from: "u3", target: null, time: hoursAgo(3), read: false, forUserId: "u1" },
+      { id: "n3", type: "follow", from: "u5", target: null, time: hoursAgo(6), read: false, forUserId: "u1" },
+      { id: "n4", type: "comment", from: "u2", target: "p1", time: hoursAgo(20), read: true, forUserId: "u1" },
+      { id: "n5", type: "event", from: null, target: "e1", time: hoursAgo(30), read: true, forUserId: "u1" },
+      { id: "n6", type: "like", from: "u1", target: "p2", time: hoursAgo(2), read: false, forUserId: "u3" },
+    ];
+  }
+  function hoursAgo(h) { return new Date(Date.now() - h * 3600 * 1000).toISOString(); }
+
+  // Apply theme
+  document.documentElement.setAttribute("data-theme", state.theme || "dark");
+
+  window.Store = {
     get state() { return state; },
     persist,
     currentUser() {
@@ -64,30 +119,41 @@
       persist();
     },
     register(payload) {
-      // Basic email uniqueness check
       if (state.users.some((u) => u.email.toLowerCase() === payload.email.toLowerCase())) {
         return { error: "Este e-mail já está cadastrado." };
       }
-      const id = "u" + (state.users.length + 1) + "_" + Date.now();
+      const id = "u_" + Date.now();
+      const displayName =
+        payload.name ||
+        payload.artistName ||
+        payload.venueName ||
+        payload.email.split("@")[0];
+      const defaultAvatars = {
+        musician: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
+        venue: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400",
+        listener: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
+      };
+      const defaultCovers = {
+        musician: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=1600",
+        venue: "https://images.unsplash.com/photo-1651511806003-30e8a55b5fce?w=1600",
+        listener: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=1600",
+      };
       const user = {
         id,
         role: payload.role,
         email: payload.email,
         password: payload.password,
-        name: payload.name || payload.artistName || payload.venueName || "",
-        artistName: payload.artistName,
-        bandName: payload.bandName,
-        venueName: payload.venueName,
+        name: displayName,
+        artistName: payload.artistName || "",
+        bandName: payload.bandName || "",
+        venueName: payload.venueName || "",
         city: payload.city || "",
         state: payload.state || "",
-        avatar:
-          payload.avatar ||
-          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-        cover:
-          payload.cover ||
-          "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1600",
+        avatar: payload.avatar || defaultAvatars[payload.role] || defaultAvatars.listener,
+        cover: payload.cover || defaultCovers[payload.role] || defaultCovers.listener,
         bio: payload.bio || "",
         genres: payload.genres || [],
+        category: payload.category || "",
         followers: 0,
         shows: 0,
         rating: 0,
@@ -97,9 +163,8 @@
       persist();
       return { user };
     },
-    userById(id) {
-      return state.users.find((u) => u.id === id);
-    },
+    userById(id) { return state.users.find((u) => u.id === id); },
+
     toggleLike(postId) {
       const uid = state.currentUserId;
       if (!uid) return;
@@ -114,9 +179,6 @@
       const uid = state.currentUserId;
       if (!uid) return false;
       return (state.likes[postId] || []).includes(uid);
-    },
-    likeCount(post) {
-      return post.likes + ((state.likes[post.id] || []).length ? (state.likes[post.id].filter(u=>u!==post.userId).length) : 0);
     },
     addComment(postId, text) {
       const uid = state.currentUserId;
@@ -144,6 +206,112 @@
       persist();
       return post;
     },
+
+    // Conversations
+    conversationsFor(userId) {
+      return state.conversations
+        .filter((c) => c.participants.includes(userId))
+        .sort((a, b) => {
+          const la = a.messages[a.messages.length - 1]?.time || 0;
+          const lb = b.messages[b.messages.length - 1]?.time || 0;
+          return new Date(lb) - new Date(la);
+        });
+    },
+    getOrCreateConversation(otherUserId) {
+      const me = state.currentUserId;
+      if (!me || me === otherUserId) return null;
+      let c = state.conversations.find(
+        (x) => x.participants.length === 2 && x.participants.includes(me) && x.participants.includes(otherUserId)
+      );
+      if (!c) {
+        c = { id: "c_" + Date.now(), participants: [me, otherUserId], messages: [] };
+        state.conversations.push(c);
+        persist();
+      }
+      return c;
+    },
+    sendMessage(convId, text) {
+      const me = state.currentUserId;
+      const c = state.conversations.find((x) => x.id === convId);
+      if (!c || !text.trim()) return;
+      c.messages.push({ from: me, text: text.trim(), time: new Date().toISOString() });
+      persist();
+      // Simulate reply after a bit
+      const other = c.participants.find((p) => p !== me);
+      const replies = [
+        "Show, entendi! Vou verificar aqui.",
+        "Bacana, vamos alinhar mais detalhes por aqui.",
+        "Perfeito 🙌",
+        "Combinado!",
+        "Show, aguardo retorno.",
+        "Manda no meu Whats pra fechar rápido.",
+      ];
+      setTimeout(() => {
+        c.messages.push({ from: other, text: replies[Math.floor(Math.random() * replies.length)], time: new Date().toISOString() });
+        persist();
+        // Notify UI
+        window.dispatchEvent(new CustomEvent("sonora:message", { detail: { convId } }));
+      }, 1400 + Math.random() * 1200);
+    },
+
+    // Tickets
+    ticketsFor(userId) {
+      return state.tickets.filter((t) => t.userId === userId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    },
+    buyTicket(eventId, quantity, buyer) {
+      const uid = state.currentUserId;
+      if (!uid) return null;
+      const ev = state.events.find((e) => e.id === eventId);
+      if (!ev) return null;
+      const code = ("BC-" + Math.random().toString(36).slice(2, 6) + "-" + Math.random().toString(36).slice(2, 6)).toUpperCase();
+      const ticket = {
+        id: "t_" + Date.now(),
+        userId: uid,
+        eventId,
+        quantity,
+        total: ev.price * quantity,
+        code,
+        buyer: buyer || {},
+        createdAt: new Date().toISOString(),
+        status: "confirmed",
+      };
+      state.tickets.push(ticket);
+      persist();
+      return ticket;
+    },
+
+    // Notifications
+    notificationsFor(userId) {
+      return state.notifications
+        .filter((n) => n.forUserId === userId)
+        .sort((a, b) => new Date(b.time) - new Date(a.time));
+    },
+    unreadCount(userId) {
+      return state.notifications.filter((n) => n.forUserId === userId && !n.read).length;
+    },
+    markAllRead(userId) {
+      state.notifications.forEach((n) => { if (n.forUserId === userId) n.read = true; });
+      persist();
+    },
+
+    // Proposals
+    saveProposal(prop) {
+      const p = { ...prop, id: "pr_" + Date.now(), status: "sent", createdAt: new Date().toISOString() };
+      state.proposals.push(p);
+      // Send notification to target
+      state.notifications.unshift({
+        id: "n_" + Date.now(),
+        type: "proposal",
+        from: state.currentUserId,
+        target: p.id,
+        time: p.createdAt,
+        read: false,
+        forUserId: p.targetUserId,
+      });
+      persist();
+      return p;
+    },
+
     setTheme(t) {
       state.theme = t;
       document.documentElement.setAttribute("data-theme", t);
@@ -153,9 +321,4 @@
       this.setTheme(state.theme === "dark" ? "light" : "dark");
     },
   };
-
-  // Apply theme on load
-  document.documentElement.setAttribute("data-theme", state.theme || "dark");
-
-  window.Store = store;
 })();
