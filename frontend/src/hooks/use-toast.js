@@ -37,56 +37,50 @@ const addToRemoveQueue = (toastId) => {
   toastTimeouts.set(toastId, timeout)
 }
 
+// --- reducer helpers (kept small on purpose) ---
+function handleAddToast(state, action) {
+  return {
+    ...state,
+    toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+  };
+}
+
+function handleUpdateToast(state, action) {
+  return {
+    ...state,
+    toasts: state.toasts.map((t) =>
+      t.id === action.toast.id ? { ...t, ...action.toast } : t),
+  };
+}
+
+function handleDismissToast(state, action) {
+  const { toastId } = action;
+  if (toastId) {
+    addToRemoveQueue(toastId);
+  } else {
+    state.toasts.forEach((toast) => addToRemoveQueue(toast.id));
+  }
+  return {
+    ...state,
+    toasts: state.toasts.map((t) =>
+      t.id === toastId || toastId === undefined
+        ? { ...t, open: false }
+        : t),
+  };
+}
+
+function handleRemoveToast(state, action) {
+  if (action.toastId === undefined) return { ...state, toasts: [] };
+  return { ...state, toasts: state.toasts.filter((t) => t.id !== action.toastId) };
+}
+
 export const reducer = (state, action) => {
   switch (action.type) {
-    case "ADD_TOAST":
-      return {
-        ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-      };
-
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t),
-      };
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
-            : t),
-      };
-    }
-    case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return {
-          ...state,
-          toasts: [],
-        }
-      }
-      return {
-        ...state,
-        toasts: state.toasts.filter((t) => t.id !== action.toastId),
-      };
+    case "ADD_TOAST": return handleAddToast(state, action);
+    case "UPDATE_TOAST": return handleUpdateToast(state, action);
+    case "DISMISS_TOAST": return handleDismissToast(state, action);
+    case "REMOVE_TOAST": return handleRemoveToast(state, action);
+    default: return state;
   }
 }
 
@@ -138,12 +132,12 @@ function useToast() {
   React.useEffect(() => {
     listeners.push(setState)
     return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
+      const idx = listeners.indexOf(setState)
+      if (idx > -1) {
+        listeners.splice(idx, 1)
       }
     };
-  }, [state])
+  }, [])
 
   return {
     ...state,
