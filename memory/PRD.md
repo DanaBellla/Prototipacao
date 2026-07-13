@@ -1,80 +1,82 @@
 # BandaConnection — PRD
 
 ## Problem Statement
-Plataforma web (protótipo em HTML5 + CSS3 + Vanilla JS puro) que conecta **Músicos**, **Estabelecimentos** e **Ouvintes** em um só ambiente, inspirada em Instagram + LinkedIn + Sympla + Spotify, focada em apresentações musicais ao vivo. Design moderno, sofisticado, com paleta roxo/branco/cinza/preto, glassmorphism, dark/light mode e responsividade completa.
+Plataforma web (protótipo em HTML5 + CSS3 + Vanilla JS puro) que conecta **Músicos**, **Estabelecimentos** e **Ouvintes** em um só ambiente, inspirada em Instagram + LinkedIn + Sympla + Spotify, focada em apresentações musicais ao vivo.
 
 ## Stack (por decisão do usuário)
 - **Vanilla HTML5 / CSS3 / JavaScript puro** (sem frameworks)
-- Persistência local via **LocalStorage** (auth simulada estilo JWT)
-- Servido através da estrutura estática em `/app/frontend/public/`
-- React foi neutralizado (`src/index.js` vazio) — apenas para não conflitar com o supervisor
+- Persistência local via **LocalStorage**
+- Servido a partir de `/app/frontend/public/`
 
 ## User Personas
-1. **Músico / Banda** — quer vitrine, propostas de show, agenda profissional.
-2. **Estabelecimento** — quer descobrir artistas, enviar propostas, lotar programação.
-3. **Ouvinte** — quer descobrir artistas, acompanhar shows, ver eventos.
-
-## Design Guidelines (aplicadas)
-- Tipografia: **Outfit** (headings) + **Plus Jakarta Sans** (corpo)
-- Paleta dark: `#09090B` base, `#131316` surface, `#8B5CF6` primary (roxo), `#EC4899` accent
-- Paleta light: `#FAFAFA` base, `#FFFFFF` surface, `#6D28D9` primary
-- Glassmorphism em headers, bottom nav, modais (blur 24px)
-- Botões pill-shaped com micro-interações (translateY -2px on hover)
-- Bento grid asymmetric em Explorar
-- Animação `fadeIn` staggered em posts do feed
+- Músico / Banda · Estabelecimento · Ouvinte
 
 ## Architecture
 ```
 /app/frontend/public/
-├── index.html               # Shell da SPA (roteia por hash)
-├── css/style.css            # Tokens, temas, componentes, responsivo
+├── index.html                     # Shell da SPA (hash routing)
+├── css/style.css                  # Tokens, temas, componentes, responsivo
 └── js/
-    ├── data.js              # Seed (6 users, 4 posts, 6 events, trends)
-    ├── store.js             # Estado + LocalStorage + auth simulada
-    ├── ui.js                # toast, modal, timeago, esc
-    ├── auth.js              # guard (require login)
-    ├── router.js            # hash router (/, /login, /register/:role, /feed, /explore, /profile/:id)
-    ├── app.js               # bootstrap
+    ├── data.js                    # Seed (users, posts, events, trends, conversations, notifications)
+    ├── store.js                   # Estado + LocalStorage + auth simulada + CRUD
+    ├── ui.js                      # toast, modal, timeago, esc
+    ├── auth.js                    # guard (require login)
+    ├── router.js                  # hash router com regex pattern matching
+    ├── app.js                     # bootstrap + rotas
     └── views/
-        ├── landing.js       # Landing page (hero, how it works, testimonials, FAQ, footer)
-        ├── auth-view.js     # Login + escolha de perfil + cadastro por role
-        ├── app-shell.js     # Sidebar + main + right panel + bottom nav (mobile)
-        ├── feed.js          # Feed Instagram-like (like, comment, publish, save)
-        ├── explore.js       # Bento de artistas / venues + grid de eventos + modal de evento
-        └── profile.js       # Perfil público (Músico / Estabelecimento / Ouvinte) + modal de proposta
+        ├── landing.js             # Landing page
+        ├── auth-view.js           # Login + escolha de perfil + cadastro por role
+        ├── app-shell.js           # Sidebar + main + right panel + bottom nav (mobile)
+        ├── feed.js                # Feed Instagram-like
+        ├── explore.js             # Bento de artistas/venues + grid de eventos
+        ├── profile.js             # Perfil público (Músico / Estabelecimento / Ouvinte)
+        ├── calendar.js            # Cronograma (Mês / Semana / Agenda)
+        ├── messages.js            # Chat estilo Messenger
+        ├── tickets.js             # Checkout + Meus Ingressos com QR Code
+        └── notifications.js       # Central de notificações
 ```
 
-## Phase 1 — Implemented (13/Fev/2026) ✅
-1. **Landing Page** completa: nav sticky glassmórfica, hero com cards flutuantes, "Como funciona" (3 personas), depoimentos, FAQ, CTA band, footer institucional; toggle dark/light.
-2. **Auth**: login com credenciais demo (`luna@sonora.app` / `sonora123`), cadastro em 2 passos (escolha de perfil → formulário específico por role). Sessão persiste em LocalStorage.
-3. **Feed Instagram-like**: composer para publicar, posts com autor verificado, media, curtir/comentar/salvar/compartilhar, hashtags coloridas, sugestões e trends no painel direito.
-4. **Explorar**: chips de tab (Artistas / Estabelecimentos / Eventos), bento asymmetric de artistas e venues, grid de eventos com modal de detalhes.
-5. **Perfis públicos**: hero com cover + avatar sobreposto, stats (seguidores/shows/rating), tags de gênero, bio, galeria, agenda de shows, CTAs **"Enviar Proposta"** (para músicos) e **"Contratar Banda"** (para venues) — ambos abrem modal com formulário funcional (data, horário, duração, valor, local, observações) e toast de confirmação.
+## Phase 1 — MVP (13/Fev/2026) ✅
+1. Landing page completa (hero, como funciona, depoimentos, FAQ, CTA, footer, dark/light toggle)
+2. Auth com escolha de perfil (Músico / Estabelecimento / Ouvinte) — cadastro em 2 passos + login
+3. Feed Instagram-like (composer, curtir, comentar, salvar, hashtags)
+4. Explorar (bento asymmetric + grid de eventos) e Perfis públicos com CTAs "Enviar Proposta" / "Contratar Banda"
 
-## Test Credentials (demo)
-- `luna@sonora.app` / `sonora123` — Músico (Luna Vieira, SP)
-- `kaio@sonora.app` / `sonora123` — Músico (Kaio Blues Trio, BH)
-- `aurora@sonora.app` / `sonora123` — Estabelecimento (Bar Aurora, SP)
-- `natura@sonora.app` / `sonora123` — Estabelecimento (Casa Natura, SP)
+## Phase 2 — Extended (13/Fev/2026) ✅
+5. **Router refatorado** — pattern matching via regex; corrigido bug em que `#/register/:role` não navegava
+6. **Cronograma** (Calendário) — Visão Mês / Semana / Agenda; eventos coloridos por gênero; auto-foca no mês com eventos seed
+7. **Ingressos — Checkout completo** — Página de finalizar compra (evento, quantidade, dados do comprador, forma de pagamento) + Modal de confirmação com QR Code (via api.qrserver.com) + Página "Meus Ingressos"
+8. **Mensagens** — Chat Messenger-like com lista de conversas, envio de mensagem + respostas automáticas simuladas; integrado ao botão "Mensagem" do perfil
+9. **Notificações** — Central com badges de leitura, filtragem por usuário, botão "Marcar todas como lidas"
+
+## Test Credentials
+- `luna@sonora.app` / `sonora123` — Músico (Luna Vieira) — tem conversas seed com Bar Aurora e Casa Natura
+- `kaio@sonora.app` / `sonora123` — Músico (Kaio Blues Trio)
 - `ravena@sonora.app` / `sonora123` — Música (Ravena, RJ)
-- `mari@sonora.app` / `sonora123` — Ouvinte (Marina Costa, SP)
+- `aurora@sonora.app` / `sonora123` — Estabelecimento (Bar Aurora)
+- `natura@sonora.app` / `sonora123` — Estabelecimento (Casa Natura)
+- `mari@sonora.app` / `sonora123` — Ouvinte (Marina Costa)
 
-## Deferred to Phase 2 (Prioritized Backlog)
+## Deferred to Phase 3 (Prioritized Backlog)
+
 ### P0
-- Sistema de propostas com status (Enviada / Em Análise / Aceita / Recusada / Cancelada / Finalizada) + inbox
-- Cronograma / Calendário estilo Google Calendar (dia/semana/mês/agenda)
-- Compra de ingressos com QR Code + comprovante visual
+- Sistema de propostas com status persistidos (Enviada / Em Análise / Aceita / Recusada / Cancelada / Finalizada) + inbox
+- Upload real de foto de perfil e capa (armazenamento)
+- Configurações completas (edição de perfil, senha, notificações, privacidade, idioma)
 
 ### P1
-- Mensagens privadas estilo Messenger (com envio de imagem, proposta, localização)
-- Notificações em tempo real (curtidas, comentários, seguidores, propostas)
-- Upload real de foto de perfil e capa
 - Filtros avançados em Eventos (cidade, data, gênero, faixa de preço)
-- Configurações completas (edição de perfil, senha, notificações, privacidade, idioma)
+- Anexos em mensagens (imagem, proposta, localização)
+- Notificações em tempo real (WebSocket ou pooling)
+- Avaliações e reviews em perfis
+- Integração com Spotify / YouTube (embed no perfil)
 
 ### P2
 - Backend real (Node.js + PostgreSQL/MySQL) substituindo LocalStorage
-- Integração com Spotify / YouTube para embed de música
-- Sistema de avaliações e reviews
 - Conteúdo patrocinado / destaque pago
-- App mobile nativo (PWA)
+- App mobile PWA
+- Link público de perfil compartilhável (bandaconnection.app/luna)
+
+## Testing
+- Iteração 1: **100% pass** — bug do cadastro corrigido; todas as features Fase 2 validadas end-to-end
+- Report: `/app/test_reports/iteration_1.json`

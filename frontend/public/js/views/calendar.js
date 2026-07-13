@@ -28,6 +28,17 @@
 
   const state = { view: "month", cursor: null };
 
+  function initialCursor() {
+    // Focus on the earliest month that has seed events (so first-time users see content)
+    const events = window.Store.state.events;
+    if (!events || !events.length) return new Date();
+    const dates = events.map(eventDate).sort((a, b) => a - b);
+    // Pick the earliest event that is in the current year or later; else the earliest overall
+    const now = new Date();
+    const future = dates.find((d) => d >= new Date(now.getFullYear(), now.getMonth(), 1));
+    return future || dates[0];
+  }
+
   function renderRight() {
     return `
       <h4>Legenda</h4>
@@ -50,7 +61,7 @@
 
   function renderCalendar(app) {
     if (!window.Auth.require()) return;
-    if (!state.cursor) state.cursor = new Date();
+    if (!state.cursor) state.cursor = initialCursor();
 
     const main = `
       <div data-testid="calendar-view">
