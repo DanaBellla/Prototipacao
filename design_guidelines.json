@@ -1,0 +1,100 @@
+{
+  "project_context": {
+    "name": "Music Connect Platform Prototype",
+    "type": "Hybrid Fullstack Social / Marketplace",
+    "stack": "Vanilla HTML5, CSS3, JS (No Frameworks)",
+    "locale": "pt-BR"
+  },
+  "theme": {
+    "concept": "Midnight Acoustic & Studio Light - A sophisticated, high-contrast palette mixing Instagram's layout, Spotify's darkness, and Airbnb's usability."
+  },
+  "typography": {
+    "primary_font": "Outfit, sans-serif",
+    "secondary_font": "Plus Jakarta Sans, sans-serif",
+    "import_url": "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap",
+    "rules": [
+      "Use 'Outfit' for all headings (H1-H6). It provides a geometric, modern, and rhythmic aesthetic perfect for a music platform.",
+      "Use 'Plus Jakarta Sans' for body text, inputs, and UI elements for maximum legibility.",
+      "Never use generic fonts like Inter, Roboto, or Arial.",
+      "Headings larger than 32px MUST use tight letter spacing (letter-spacing: -0.02em)."
+    ]
+  },
+  "colors": {
+    "dark_mode": {
+      "--bg-base": "#09090B",
+      "--bg-surface": "#131316",
+      "--bg-glass": "rgba(19, 19, 22, 0.65)",
+      "--color-primary": "#8B5CF6",
+      "--color-primary-hover": "#A78BFA",
+      "--text-main": "#FAFAFA",
+      "--text-muted": "#A1A1AA",
+      "--border-subtle": "rgba(255, 255, 255, 0.08)"
+    },
+    "light_mode": {
+      "--bg-base": "#FAFAFA",
+      "--bg-surface": "#FFFFFF",
+      "--bg-glass": "rgba(255, 255, 255, 0.75)",
+      "--color-primary": "#6D28D9",
+      "--color-primary-hover": "#5B21B6",
+      "--text-main": "#09090B",
+      "--text-muted": "#52525B",
+      "--border-subtle": "rgba(0, 0, 0, 0.08)"
+    }
+  },
+  "layouts": {
+    "app_shell": "Desktop: Fixed Left Sidebar (280px), Center Feed Column (max-width: 600px), Right Explore Panel (320px). Mobile: Bottom tab navigation.",
+    "bento_grid": "Use asymmetrical bento grids for the 'Explorar' section. Combine tall cards (row-span-2) with standard square cards.",
+    "spacing_scale": "Use CSS variables for generous spacing: --space-sm (8px), --space-md (16px), --space-lg (32px), --space-xl (64px)."
+  },
+  "component_styles": {
+    "buttons": "Pill-shaped (border-radius: 9999px). Primary buttons use var(--color-primary). Add 'transform: translateY(-2px)' and subtle box-shadow on hover.",
+    "feed_cards": "Flat surfaces with var(--bg-surface) and 1px var(--border-subtle). Do not over-shadow. Images bleed to the edges of the card container.",
+    "sidebar": "Fixed position. Includes Logo, User Profile snippet, and navigation links. Active link should have bold text and a primary color accent.",
+    "profile_hero": "Hero cover image height 30vh. Avatar overlaps the cover by 50% (margin-top: -60px), with a 4px solid border matching var(--bg-base) to create a cutout effect.",
+    "modals_and_proposals": "Centered in viewport. Glassmorphic backdrop overlay. The modal itself uses var(--bg-surface) with a 24px border-radius.",
+    "glassmorphism": "Used strictly for sticky headers, bottom nav, and modal backdrops. Requires 'backdrop-filter: blur(24px) saturate(150%)' and a 1px semi-transparent border."
+  },
+  "motion": {
+    "rules": [
+      "Use micro-interactions for all interactive elements.",
+      "NEVER use 'transition: all'. Use specific properties: 'transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease'.",
+      "Add staggered fade-in animations for feed posts using CSS keyframes (@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } })."
+    ]
+  },
+  "image_urls": [
+    {
+      "url": "https://images.pexels.com/photos/26447525/pexels-photo-26447525.jpeg",
+      "category": "Hero Background / Live Event Post",
+      "description": "Dramatic lighting at a live concert. Perfect for the Landing Page Hero or an event highlight in the feed."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee",
+      "category": "Musician Profile Cover / Post",
+      "description": "Man playing electric guitar. Ideal for the 'Músico' profile hero cover."
+    },
+    {
+      "url": "https://images.unsplash.com/photo-1651511806003-30e8a55b5fce",
+      "category": "Venue Profile Cover / Post",
+      "description": "Modern bar/pub interior. Perfect for the 'Estabelecimento' profile cover."
+    }
+  ],
+  "instructions_to_main_agent": [
+    "Create a clean Vanilla HTML5, CSS3, and JS architecture. DO NOT use React, Vue, Tailwind, or Shadcn.",
+    "Create an 'index.html' holding the Landing Page, and separate HTML files or dynamically injected views via JS for the App interface (Feed, Profiles).",
+    "Use CSS Variables (:root and [data-theme='dark']) in 'style.css' to implement the dark/light mode logic.",
+    "Include Phosphor Icons via CDN: <script src=\"https://unpkg.com/@phosphor-icons/web\"></script>.",
+    "Implement a theme toggle button that switches the 'data-theme' attribute on the document element.",
+    "Use Vanilla JS (app.js) to create mock data arrays and dynamically render the Instagram-style feed (posts, likes, comments).",
+    "Ensure layout is responsive: use media queries to hide the sidebar and show a bottom glassmorphic navigation bar on mobile screens.",
+    "Implement the 3 specific profiles (Músico, Estabelecimento, Ouvinte) with their respective CTAs ('Enviar Proposta', 'Contratar Banda').",
+    "All text content MUST be in Portuguese (pt-BR)."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "GENERAL UI UX DESIGN GUIDELINES",
+    "All interactive and key informational elements MUST include a 'data-testid' attribute (e.g., data-testid='theme-toggle-button').",
+    "Do not apply global text centering. Keep text left-aligned for natural reading, except in specific hero sections.",
+    "Hover states must have higher contrast or a clear visual shift.",
+    "CRITICAL: Never use completely transparent backgrounds for elements overlapping content (headers, dropdowns, modals). Always apply a blur and a semi-transparent color (glassmorphism).",
+    "Create depth through layered design elements with z-index hierarchy."
+  ]
+}
