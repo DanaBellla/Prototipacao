@@ -23,6 +23,7 @@
       { key: "messages", href: "#/messages", icon: "ph-chat-circle-dots", label: "Mensagens" },
       { key: "notifications", href: "#/notifications", icon: "ph-bell", label: "Notificações" },
       { key: "profile", href: `#/profile/${u.id}`, icon: "ph-user-circle", label: "Perfil" },
+      { key: "settings", href: "#/settings", icon: "ph-gear-six", label: "Configurações" },
     ];
 
     const bottom = [
@@ -31,6 +32,7 @@
       { key: "calendar", href: "#/calendar", icon: "ph-calendar-star", label: "Agenda" },
       { key: "messages", href: "#/messages", icon: "ph-chat-circle-dots", label: "Mensagens" },
       { key: "profile", href: `#/profile/${u.id}`, icon: "ph-user-circle", label: "Perfil" },
+      { key: "settings", href: "#/settings", icon: "ph-gear-six", label: "Ajustes" },
     ];
 
     return `
@@ -50,11 +52,13 @@
           </nav>
           <div class="side-foot">
             <div class="side-user" data-testid="side-user-card">
-              <img src="${esc(u.avatar)}" alt="${esc(u.name)}" />
-              <div class="info">
-                <strong>${esc(u.name)}</strong>
-                <span>${esc(roleLabel(u.role))}</span>
-              </div>
+              <a class="side-user-profile" href="#/profile/${u.id}" data-testid="side-user-profile-link" aria-label="Abrir perfil de ${esc(u.name)}">
+                <img src="${esc(u.avatar)}" alt="" />
+                <span class="info">
+                  <strong>${esc(u.name)}</strong>
+                  <span>${esc(roleLabel(u.role))}</span>
+                </span>
+              </a>
               <button class="btn-icon" data-testid="theme-toggle-button" aria-label="Alternar tema" data-action="toggle-theme">
                 <i class="ph ${theme === "dark" ? "ph-sun" : "ph-moon"}"></i>
               </button>

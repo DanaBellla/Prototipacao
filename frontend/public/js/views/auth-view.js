@@ -3,6 +3,11 @@
   const { esc, toast } = window.UI;
 
   function shell(right) {
+    const quotes = [
+      { text: "A música pode mudar o mundo porque pode mudar as pessoas.", author: "Bono, vocalista do U2" },
+      { text: "A música é uma revelação superior a toda sabedoria e filosofia.", author: "Ludwig van Beethoven" },
+    ];
+    const quote = quotes[Math.floor(Math.random() * quotes.length)];
     return `
       <div class="auth-shell" data-testid="auth-view">
         <aside class="auth-side">
@@ -11,8 +16,8 @@
             BandaConnection
           </a>
           <div class="quote">
-            "A música ao vivo é comunidade. O BandaConnection é o palco digital dessa comunidade."
-            <small>— Cena Musical Brasileira · 2026</small>
+            “${esc(quote.text)}”
+            <small>— ${esc(quote.author)}</small>
           </div>
           <div style="font-size:13px;opacity:0.85;">Protótipo · dados de demonstração</div>
         </aside>

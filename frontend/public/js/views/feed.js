@@ -16,7 +16,7 @@
               <strong>${esc(u.name)}</strong>
               <span>${esc(u.city || "")} · ${esc(window.Shell.roleLabel(u.role))}</span>
             </div>
-            <button class="btn btn-outline" data-testid="follow-btn-${u.id}">Seguir</button>
+            <button class="btn ${window.Store.isFollowing(u.id) ? "btn-ghost" : "btn-outline"}" data-follow-user="${u.id}" data-testid="follow-btn-${u.id}">${window.Store.isFollowing(u.id) ? "Seguindo" : "Seguir"}</button>
           </div>
         `).join("")}
       </div>
@@ -50,7 +50,15 @@
       .join("");
 
     const commentsPreview = p.comments && p.comments.length
-      ? `<span class="comments-preview" data-testid="post-comments-preview-${p.id}">Ver ${p.comments.length} comentário${p.comments.length > 1 ? "s" : ""}</span>`
+      ? `<button class="comments-preview" data-action="view-comments" data-postid="${p.id}" data-testid="post-comments-preview-${p.id}">Ver ${p.comments.length} comentário${p.comments.length > 1 ? "s" : ""}</button>`
+      : "";
+    const images = p.images || (p.image ? [p.image] : []);
+    const attachments = p.attachments || [];
+    const media = images.length || attachments.length
+      ? `<div class="post-media" data-testid="post-media-${p.id}">
+           ${images.map((src) => `<img src="${esc(src)}" alt="Imagem do post de ${esc(author.name)}" loading="lazy" />`).join("")}
+           ${attachments.map((file) => `<a class="post-file" href="${esc(file.data)}" download="${esc(file.name)}"><i class="ph ph-file-arrow-down"></i><span>${esc(file.name)}</span></a>`).join("")}
+         </div>`
       : "";
 
     return `
@@ -62,13 +70,15 @@
               ${esc(author.name)}
               ${author.verified ? '<i class="ph-fill ph-seal-check verified" title="Verificado"></i>' : ""}
             </strong>
-            <span>${esc(p.location || window.Shell.roleLabel(author.role))} · ${esc(timeAgo(p.time))}</span>
+            <div class="post-meta-row">
+              <span class="post-role-badge post-role-${esc(author.role)}">${esc(window.Shell.roleLabel(author.role))}</span>
+              ${p.location ? `<span class="post-location">${esc(p.location)}</span>` : ""}
+              <span class="post-time">${esc(timeAgo(p.time))}</span>
+            </div>
           </div>
           <button class="btn-icon more" aria-label="Mais" data-testid="post-more-${p.id}"><i class="ph ph-dots-three"></i></button>
         </header>
-        <div class="post-media" data-testid="post-media-${p.id}">
-          <img src="${esc(p.image)}" alt="Post de ${esc(author.name)}" loading="lazy" />
-        </div>
+        ${media}
         <div class="post-actions">
           <button class="action ${liked ? "liked" : ""}" data-action="like" data-postid="${p.id}" data-testid="like-btn-${p.id}">
             <i class="ph ph-heart"></i><i class="ph-fill ph-heart"></i>
@@ -98,18 +108,24 @@
     if (!window.Auth.require()) return;
     const u = window.Store.currentUser();
     const posts = window.Store.state.posts;
+    const composer = window.Store.canCreatePost() ? `
+      <div class="composer">
+        <img src="${esc(u.avatar)}" alt="Você" />
+        <input placeholder="Compartilhe algo com a comunidade..." data-testid="composer-input" id="composer-input" />
+        <div class="composer-actions">
+          <input type="file" accept="image/*" multiple hidden data-testid="composer-image-input" />
+          <input type="file" multiple hidden data-testid="composer-file-input" />
+          <button class="btn-icon" aria-label="Adicionar imagens" title="Adicionar imagens" data-testid="composer-photo-btn"><i class="ph ph-image"></i></button>
+          <button class="btn-icon" aria-label="Anexar arquivos" title="Anexar arquivos" data-testid="composer-file-btn"><i class="ph ph-paperclip"></i></button>
+          <button class="btn btn-primary btn-sm" data-testid="composer-publish-btn" data-action="publish">Publicar</button>
+        </div>
+      </div>
+      <div class="composer-attachments" data-testid="composer-attachments" hidden></div>
+    ` : "";
 
     const main = `
       <div class="feed-col" data-testid="feed-col">
-        <div class="composer">
-          <img src="${esc(u.avatar)}" alt="Você" />
-          <input placeholder="Compartilhe algo com a comunidade..." data-testid="composer-input" id="composer-input" />
-          <div class="composer-actions">
-            <button class="btn-icon" aria-label="Foto" data-testid="composer-photo-btn"><i class="ph ph-image"></i></button>
-            <button class="btn-icon" aria-label="Evento" data-testid="composer-event-btn"><i class="ph ph-calendar-plus"></i></button>
-            <button class="btn btn-primary btn-sm" data-testid="composer-publish-btn" data-action="publish">Publicar</button>
-          </div>
-        </div>
+        ${composer}
         <div id="feed-list" data-testid="feed-list">
           ${posts.map(renderPost).join("")}
         </div>
@@ -122,6 +138,72 @@
   }
 
   function wireFeed(root) {
+    const selectedImages = [];
+    const selectedFiles = [];
+    const preview = root.querySelector('[data-testid="composer-attachments"]');
+
+    if (preview) {
+      const maxAttachmentBytes = 2 * 1024 * 1024;
+      const renderAttachmentPreview = () => {
+        const items = [
+          ...selectedImages.map((item, index) => ({ ...item, kind: "image", index })),
+          ...selectedFiles.map((item, index) => ({ ...item, kind: "file", index })),
+        ];
+        preview.hidden = items.length === 0;
+        preview.innerHTML = items.map((item) => item.kind === "image"
+          ? `<div class="composer-attachment"><img src="${item.data}" alt="${esc(item.name)}" /><button type="button" class="btn-icon" aria-label="Remover ${esc(item.name)}" data-remove-kind="image" data-remove-index="${item.index}"><i class="ph ph-x"></i></button></div>`
+          : `<div class="composer-attachment-file"><i class="ph ph-file"></i><span>${esc(item.name)}</span><button type="button" class="btn-icon" aria-label="Remover ${esc(item.name)}" data-remove-kind="file" data-remove-index="${item.index}"><i class="ph ph-x"></i></button></div>`
+        ).join("");
+      };
+
+      const readFile = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result, size: file.size });
+        reader.onerror = () => reject(new Error("Não foi possível ler o arquivo."));
+        reader.readAsDataURL(file);
+      });
+
+    root.querySelector('[data-testid="composer-photo-btn"]').addEventListener("click", () => root.querySelector('[data-testid="composer-image-input"]').click());
+    root.querySelector('[data-testid="composer-file-btn"]').addEventListener("click", () => root.querySelector('[data-testid="composer-file-input"]').click());
+    [
+      [root.querySelector('[data-testid="composer-image-input"]'), selectedImages],
+      [root.querySelector('[data-testid="composer-file-input"]'), selectedFiles],
+    ].forEach(([input, collection]) => input.addEventListener("change", async () => {
+      const files = Array.from(input.files || []);
+      const currentSize = [...selectedImages, ...selectedFiles].reduce((total, item) => total + item.size, 0);
+      const incomingSize = files.reduce((total, file) => total + file.size, 0);
+      if (currentSize + incomingSize > maxAttachmentBytes) {
+        window.UI.toast("Os anexos deste post podem ter até 2 MB no total.", { type: "error" });
+        input.value = "";
+        return;
+      }
+      try {
+        collection.push(...await Promise.all(files.map(readFile)));
+        renderAttachmentPreview();
+      } catch (error) {
+        window.UI.toast(error.message, { type: "error" });
+      }
+      input.value = "";
+    }));
+      preview.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-remove-kind]");
+        if (!button) return;
+        const collection = button.dataset.removeKind === "image" ? selectedImages : selectedFiles;
+        collection.splice(Number(button.dataset.removeIndex), 1);
+        renderAttachmentPreview();
+      });
+    }
+
+    root.querySelectorAll("[data-follow-user]").forEach((button) =>
+      button.addEventListener("click", () => {
+        const target = window.Store.userById(button.dataset.followUser);
+        if (!target) return;
+        const isFollowing = window.Store.toggleFollow(target.id);
+        window.UI.toast(isFollowing ? `Você está seguindo ${target.name}.` : `Você deixou de seguir ${target.name}.`, { type: "success" });
+        renderFeed(root);
+      })
+    );
+
     // Nav delegation
     root.querySelectorAll("[data-nav]").forEach((n) =>
       n.addEventListener("click", () => (location.hash = n.dataset.nav))
@@ -169,33 +251,54 @@
         window.UI.toast("Comentário publicado.", { type: "success" });
         // Update preview line
         const post = window.Store.state.posts.find((p) => p.id === id);
-        const preview = root.querySelector(`[data-testid="post-comments-preview-${id}"]`);
-        if (preview) preview.textContent = `Ver ${post.comments.length} comentário${post.comments.length > 1 ? "s" : ""}`;
+        if (post) renderFeed(root);
       })
+    );
+
+    root.querySelectorAll('[data-action="view-comments"]').forEach((button) =>
+      button.addEventListener("click", () => openCommentsModal(button.dataset.postid))
     );
 
     // Composer publish (opens quick modal)
     root.querySelectorAll('[data-action="publish"]').forEach((btn) =>
       btn.addEventListener("click", () => {
         const caption = (root.querySelector("#composer-input").value || "").trim();
-        if (!caption) {
-          window.UI.toast("Escreva algo antes de publicar.", { type: "error" });
+        if (!caption && !selectedImages.length && !selectedFiles.length) {
+          window.UI.toast("Escreva algo ou adicione uma mídia antes de publicar.", { type: "error" });
           return;
         }
         const post = window.Store.createPost({
           caption,
-          image:
-            "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200",
+          images: selectedImages.map((item) => item.data),
+          attachments: selectedFiles.map(({ name, type, data }) => ({ name, type, data })),
           location: (window.Store.currentUser().city || "") + (window.Store.currentUser().state ? ", " + window.Store.currentUser().state : ""),
         });
         window.UI.toast("Sua publicação está no ar!", { type: "success", title: "Publicado" });
-        // Prepend new post
-        const list = root.querySelector("#feed-list");
-        list.insertAdjacentHTML("afterbegin", renderPost(post));
-        root.querySelector("#composer-input").value = "";
-        wireFeed(root); // rewire new elements
+        renderFeed(root);
       })
     );
+  }
+
+  function openCommentsModal(postId) {
+    const post = window.Store.state.posts.find((entry) => entry.id === postId);
+    if (!post) return;
+    const comments = post.comments || [];
+    const body = comments.length
+      ? `<div class="comments-list">${comments.map((comment) => {
+          const author = window.Store.userById(comment.user);
+          return `<article class="comment-item">
+            <img src="${esc(author?.avatar || "")}" alt="" />
+            <div><div class="comment-author">${esc(author?.name || "Usuário")}<span class="post-role-badge post-role-${esc(author?.role || "listener")}">${esc(window.Shell.roleLabel(author?.role))}</span></div><p>${esc(comment.text)}</p></div>
+          </article>`;
+        }).join("")}</div>`
+      : `<p class="text-muted">Ainda não há comentários nesta publicação.</p>`;
+    window.UI.openModal({
+      title: "Comentários",
+      subtitle: `${comments.length} comentário${comments.length === 1 ? "" : "s"}`,
+      body,
+      testId: "comments-modal",
+      actions: [{ label: "Fechar", variant: "btn-ghost", testId: "comments-close-btn" }],
+    });
   }
 
   window.Views = window.Views || {};

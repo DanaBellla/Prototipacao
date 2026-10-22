@@ -60,7 +60,7 @@
                 <div class="caption">
                   <div class="cat">${esc((a.genres && a.genres[0]) || "Artista")}</div>
                   <h4>${esc(a.artistName || a.name)}</h4>
-                  <div class="meta">${esc(a.city)}, ${esc(a.state)} · ${a.followers} seguidores</div>
+                  <div class="meta">${esc(a.city)}, ${esc(a.state)} · ${window.Store.followersOf(a.id).length} seguidores</div>
                 </div>
               </div>
             `).join("")}
@@ -148,6 +148,29 @@
   function openEventModal(id) {
     const e = window.Store.state.events.find((x) => x.id === id);
     if (!e) return;
+    const actions = [
+      { label: "Fechar", variant: "btn-ghost", testId: "event-modal-close-btn" },
+    ];
+    if (window.Store.canManageEvent(e)) {
+      actions.push({
+        label: "Editar show",
+        variant: "btn-ghost",
+        testId: "event-modal-edit-btn",
+        onClick: (close) => {
+          close();
+          window.openEventEditor(e.id);
+        },
+      });
+    }
+    actions.push({
+      label: "Comprar ingresso",
+      variant: "btn-primary",
+      testId: "event-modal-buy-btn",
+      onClick: (close) => {
+        close();
+        location.hash = `#/checkout/${e.id}`;
+      },
+    });
     window.UI.openModal({
       title: e.title,
       subtitle: `${e.dateFull} · ${e.venue}, ${e.city}`,
@@ -170,18 +193,7 @@
           </div>
         </div>
       `,
-      actions: [
-        { label: "Fechar", variant: "btn-ghost", testId: "event-modal-close-btn" },
-        {
-          label: "Comprar ingresso",
-          variant: "btn-primary",
-          testId: "event-modal-buy-btn",
-          onClick: (close) => {
-            close();
-            location.hash = `#/checkout/${e.id}`;
-          },
-        },
-      ],
+      actions,
     });
   }
   // Expose for calendar view

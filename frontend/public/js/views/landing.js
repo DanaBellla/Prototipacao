@@ -32,7 +32,7 @@
                 <i class="ph-fill ph-sparkle"></i> A nova casa da música ao vivo
               </span>
               <h1 data-testid="hero-title">
-                Onde <span class="hl">bandas</span>, casas e ouvintes se conectam.
+                Sistema de conexão entre músicos, ouvintes e estabelecimentos.
               </h1>
               <p class="lead" data-testid="hero-lead">
                 Descubra artistas, agende shows e viva noites inesquecíveis.
@@ -54,7 +54,7 @@
               </div>
             </div>
             <div class="hero-visual">
-              <img src="https://images.pexels.com/photos/26447525/pexels-photo-26447525.jpeg?w=1400" alt="Palco iluminado em show ao vivo" />
+              <img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1400" alt="Público acompanhando um show ao vivo" />
               <div class="hero-floating fl-1">
                 <div class="avatar"><i class="ph-fill ph-guitar"></i></div>
                 <div class="txt"><strong>Luna Vieira</strong><span>Confirmada · Sex 22h</span></div>

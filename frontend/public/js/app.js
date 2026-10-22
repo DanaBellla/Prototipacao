@@ -18,6 +18,7 @@
   R.on("/messages", (app) => V.messages && V.messages(app));
   R.on("/messages/:userId", (app, params) => V.messages && V.messages(app, params));
   R.on("/notifications", (app) => V.notifications && V.notifications(app));
+  R.on("/settings", (app) => V.settings && V.settings(app));
   R.on("/tickets", (app) => V.tickets && V.tickets(app));
   R.on("/checkout/:eventId", (app, params) => V.checkout && V.checkout(app, params));
   R.on("/profile/:id", (app, params) => V.profile(app, params));

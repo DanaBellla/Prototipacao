@@ -52,6 +52,7 @@
   ["conversations", "tickets", "notifications", "proposals"].forEach((k) => {
     if (!state[k]) state[k] = defaults[k];
   });
+  if (!state.follows || typeof state.follows !== "object") state.follows = {};
 
   function seedConversations() {
     // Threads between u1 (Luna), u3 (Aurora), u2 (Kaio), u4 (Natura)
@@ -129,9 +130,9 @@
         payload.venueName ||
         payload.email.split("@")[0];
       const defaultAvatars = {
-        musician: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400",
-        venue: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400",
-        listener: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
+        musician: "./images/default-avatar.svg",
+        venue: "./images/default-avatar.svg",
+        listener: "./images/default-avatar.svg",
       };
       const defaultCovers = {
         musician: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=1600",
@@ -164,6 +165,68 @@
       return { user };
     },
     userById(id) { return state.users.find((u) => u.id === id); },
+    updateUser(userId, updates) {
+      const user = state.users.find((entry) => entry.id === userId);
+      if (!user || userId !== state.currentUserId) return null;
+      Object.assign(user, updates);
+      persist();
+      return user;
+    },
+
+    isFollowing(targetUserId, followerId = state.currentUserId) {
+      return !!followerId && (state.follows[followerId] || []).includes(targetUserId);
+    },
+
+    toggleFollow(targetUserId) {
+      const followerId = state.currentUserId;
+      if (!followerId || followerId === targetUserId || !this.userById(targetUserId)) return false;
+      const following = state.follows[followerId] || [];
+      const index = following.indexOf(targetUserId);
+      if (index >= 0) following.splice(index, 1);
+      else following.push(targetUserId);
+      state.follows[followerId] = following;
+      persist();
+      return index < 0;
+    },
+
+    followingOf(userId) {
+      return (state.follows[userId] || [])
+        .map((id) => this.userById(id))
+        .filter(Boolean);
+    },
+
+    followersOf(userId) {
+      return Object.keys(state.follows)
+        .filter((followerId) => (state.follows[followerId] || []).includes(userId))
+        .map((followerId) => this.userById(followerId))
+        .filter(Boolean);
+    },
+
+    canCreatePost() {
+      const user = this.currentUser();
+      return !!user && (user.role === "musician" || user.role === "venue");
+    },
+
+    canManageEvents() {
+      const user = this.currentUser();
+      return !!user && (user.role === "musician" || user.role === "venue");
+    },
+
+    canManageEvent(event) {
+      const user = this.currentUser();
+      if (!user || !event || !this.canManageEvents()) return false;
+      if (event.createdByUserId) return event.createdByUserId === user.id;
+      return user.role === "musician"
+        ? event.artistId === user.id
+        : event.venueId === user.id;
+    },
+
+    canSendProposal(targetUserId) {
+      const sender = this.currentUser();
+      const target = this.userById(targetUserId);
+      return !!sender && !!target && sender.id !== target.id &&
+        sender.role === "venue" && target.role === "musician";
+    },
 
     toggleLike(postId) {
       const uid = state.currentUserId;
@@ -190,12 +253,14 @@
     },
     createPost(payload) {
       const uid = state.currentUserId;
-      if (!uid) return;
+      if (!uid || !this.canCreatePost()) return null;
       const post = {
         id: "p_" + Date.now(),
         userId: uid,
         time: new Date().toISOString(),
-        image: payload.image || "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200",
+        image: payload.images?.[0] || payload.image || "",
+        images: payload.images || (payload.image ? [payload.image] : []),
+        attachments: payload.attachments || [],
         caption: payload.caption || "",
         hashtags: (payload.caption || "").match(/#\w+/g) || [],
         likes: 0,
@@ -205,6 +270,36 @@
       state.posts.unshift(post);
       persist();
       return post;
+    },
+
+    createEvent(payload) {
+      const user = this.currentUser();
+      if (!user || !this.canManageEvents()) return null;
+      const event = {
+        ...payload,
+        id: "e_" + Date.now(),
+        createdByUserId: user.id,
+        artistId: user.role === "musician" ? user.id : (payload.artistId || ""),
+        venueId: user.role === "venue" ? user.id : (payload.venueId || ""),
+      };
+      state.events.unshift(event);
+      persist();
+      return event;
+    },
+
+    updateEvent(eventId, updates) {
+      const event = state.events.find((entry) => entry.id === eventId);
+      const user = this.currentUser();
+      if (!event || !user || !this.canManageEvent(event)) return null;
+      const ownerId = event.createdByUserId || user.id;
+      Object.assign(event, updates, {
+        id: event.id,
+        createdByUserId: ownerId,
+        artistId: user.role === "musician" ? user.id : (updates.artistId || ""),
+        venueId: user.role === "venue" ? user.id : (updates.venueId || ""),
+      });
+      persist();
+      return event;
     },
 
     // Conversations
@@ -296,13 +391,20 @@
 
     // Proposals
     saveProposal(prop) {
-      const p = { ...prop, id: "pr_" + Date.now(), status: "sent", createdAt: new Date().toISOString() };
+      if (!this.canSendProposal(prop.targetUserId)) return null;
+      const p = {
+        ...prop,
+        fromUserId: state.currentUserId,
+        id: "pr_" + Date.now(),
+        status: "sent",
+        createdAt: new Date().toISOString(),
+      };
       state.proposals.push(p);
       // Send notification to target
       state.notifications.unshift({
         id: "n_" + Date.now(),
         type: "proposal",
-        from: state.currentUserId,
+        from: p.fromUserId,
         target: p.id,
         time: p.createdAt,
         read: false,
