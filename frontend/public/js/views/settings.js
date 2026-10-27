@@ -17,7 +17,7 @@
             <p class="text-muted">Usada para aproximar os shows do seu cronograma.</p>
             <div class="form-row">
               <div class="form-group"><label for="settings-city">Cidade</label><input id="settings-city" name="city" value="${esc(user.city || "")}" placeholder="Ex.: São Paulo" /></div>
-              <div class="form-group"><label for="settings-state">Estado</label><input id="settings-state" name="state" value="${esc(user.state || "")}" maxlength="2" placeholder="Ex.: SP" /></div>
+              <div class="form-group"><label for="settings-state">Estado</label><select id="settings-state" name="state">${window.UI.stateOptions(user.state)}</select></div>
             </div>
           </section>
           <section class="settings-section">

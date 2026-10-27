@@ -56,7 +56,7 @@
           <div class="bento" data-testid="artists-bento">
             ${artists.map((a, i) => `
               <div class="bento-card ${bentoClass(i)}" data-nav="#/profile/${a.id}" data-testid="bento-artist-${a.id}">
-                <img src="${esc(a.cover || a.avatar)}" alt="${esc(a.name)}" />
+                <img src="${esc(a.cover || a.avatar)}" alt="${esc(a.name)}" style="object-position:${Number.isFinite(Number(a.coverPosition?.x)) ? Number(a.coverPosition.x) : 50}% ${Number.isFinite(Number(a.coverPosition?.y)) ? Number(a.coverPosition.y) : 50}%;" />
                 <div class="caption">
                   <div class="cat">${esc((a.genres && a.genres[0]) || "Artista")}</div>
                   <h4>${esc(a.artistName || a.name)}</h4>
@@ -71,7 +71,7 @@
           <div class="bento">
             ${venues.map((v, i) => `
               <div class="bento-card ${bentoClass(i)}" data-nav="#/profile/${v.id}" data-testid="bento-venue-${v.id}">
-                <img src="${esc(v.cover || v.avatar)}" alt="${esc(v.name)}" />
+                <img src="${esc(v.cover || v.avatar)}" alt="${esc(v.name)}" style="object-position:${Number.isFinite(Number(v.coverPosition?.x)) ? Number(v.coverPosition.x) : 50}% ${Number.isFinite(Number(v.coverPosition?.y)) ? Number(v.coverPosition.y) : 50}%;" />
                 <div class="caption">
                   <div class="cat">${esc(v.category || "Estabelecimento")}</div>
                   <h4>${esc(v.name)}</h4>

@@ -53,7 +53,7 @@
           <div class="side-foot">
             <div class="side-user" data-testid="side-user-card">
               <a class="side-user-profile" href="#/profile/${u.id}" data-testid="side-user-profile-link" aria-label="Abrir perfil de ${esc(u.name)}">
-                <img src="${esc(u.avatar)}" alt="" />
+                <img src="${esc(u.avatar)}" alt="" style="object-position:${Number.isFinite(Number(u.avatarPosition?.x)) ? Number(u.avatarPosition.x) : 50}% ${Number.isFinite(Number(u.avatarPosition?.y)) ? Number(u.avatarPosition.y) : 50}%;" />
                 <span class="info">
                   <strong>${esc(u.name)}</strong>
                   <span>${esc(roleLabel(u.role))}</span>

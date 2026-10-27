@@ -68,14 +68,14 @@
     return `
       <button class="conv-item" data-conv-id="${c.id}" data-testid="conv-item-${c.id}"
         style="width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;background:${isActive ? "var(--color-primary-soft)" : "transparent"};border:none;color:var(--text-main);cursor:pointer;margin-bottom:4px;transition:background-color 0.2s ease;">
-        <img src="${esc(other.avatar)}" alt="${esc(other.name)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;" />
+        <img src="${esc(other.avatar)}" alt="${esc(other.name)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;object-position:${Number.isFinite(Number(other.avatarPosition?.x)) ? Number(other.avatarPosition.x) : 50}% ${Number.isFinite(Number(other.avatarPosition?.y)) ? Number(other.avatarPosition.y) : 50}%;" />
         <div style="flex:1;min-width:0;">
           <div style="display:flex;justify-content:space-between;gap:6px;">
             <strong style="font-family:var(--font-heading);font-size:14px;">${esc(other.name)}</strong>
             ${last ? `<span class="text-dim" style="font-size:11px;">${esc(timeAgo(last.time))}</span>` : ""}
           </div>
           <div class="text-muted" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-            ${last ? esc(last.text) : "Iniciar conversa"}
+            ${last ? esc(last.text || (last.attachments?.length ? "Arquivo enviado" : "Iniciar conversa")) : "Iniciar conversa"}
           </div>
         </div>
       </button>
@@ -90,7 +90,7 @@
 
     return `
       <header style="padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:12px;">
-        <img src="${esc(other.avatar)}" alt="${esc(other.name)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;" />
+        <img src="${esc(other.avatar)}" alt="${esc(other.name)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;object-position:${Number.isFinite(Number(other.avatarPosition?.x)) ? Number(other.avatarPosition.x) : 50}% ${Number.isFinite(Number(other.avatarPosition?.y)) ? Number(other.avatarPosition.y) : 50}%;" />
         <div style="flex:1;">
           <a href="#/profile/${other.id}" style="font-family:var(--font-heading);font-size:16px;font-weight:600;color:var(--text-main);" data-testid="chat-header-name">${esc(other.name)}</a>
           <div class="text-muted" style="font-size:12px;">${esc(window.Shell.roleLabel(other.role))} · ${esc(other.city || "")}</div>
@@ -100,25 +100,60 @@
       <div id="messages-scroll" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:8px;" data-testid="messages-scroll">
         ${c.messages.map((m) => bubbleHTML(m, me)).join("")}
       </div>
-      <footer style="padding:14px 16px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:10px;">
-        <button class="btn-icon" aria-label="Anexar" data-testid="chat-attach-btn"><i class="ph ph-paperclip"></i></button>
-        <input id="msg-input" placeholder="Escreva uma mensagem..." data-testid="msg-input"
-          style="flex:1;padding:12px 16px;background:var(--bg-elevated);border:1px solid transparent;border-radius:9999px;color:var(--text-main);font-size:14px;outline:none;" />
-        <button class="btn btn-primary" data-action="send" data-conv-id="${convId}" data-testid="msg-send-btn">
-          <i class="ph-fill ph-paper-plane-tilt"></i> Enviar
-        </button>
+      <footer style="padding:14px 16px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:8px;">
+        <div id="chat-file-list" class="chat-file-list" data-testid="chat-file-list" hidden></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="file" id="chat-file-input" multiple hidden data-testid="chat-file-input" />
+          <button class="btn-icon" aria-label="Anexar" data-testid="chat-attach-btn"><i class="ph ph-paperclip"></i></button>
+          <input id="msg-input" placeholder="Escreva uma mensagem..." data-testid="msg-input"
+            style="flex:1;padding:12px 16px;background:var(--bg-elevated);border:1px solid transparent;border-radius:9999px;color:var(--text-main);font-size:14px;outline:none;" />
+          <button class="btn btn-primary" data-action="send" data-conv-id="${convId}" data-testid="msg-send-btn">
+            <i class="ph-fill ph-paper-plane-tilt"></i> Enviar
+          </button>
+        </div>
       </footer>
     `;
   }
 
   function bubbleHTML(m, me) {
+    if (m.type === "proposal") return proposalBubbleHTML(m, me);
     const mine = m.from === me.id;
+    const attachments = (m.attachments || []).map((file) => `
+      <a class="chat-attachment" href="${esc(file.data)}" download="${esc(file.name)}" data-testid="chat-attachment">
+        ${file.type?.startsWith("image/") ? `<img src="${esc(file.data)}" alt="${esc(file.name)}" />` : `<i class="ph ph-file-arrow-down"></i>`}
+        <span>${esc(file.name)}</span>
+      </a>
+    `).join("");
     return `
       <div style="display:flex;justify-content:${mine ? "flex-end" : "flex-start"};">
         <div style="max-width:70%;padding:10px 14px;border-radius:${mine ? "16px 16px 4px 16px" : "16px 16px 16px 4px"};background:${mine ? "var(--color-primary)" : "var(--bg-elevated)"};color:${mine ? "white" : "var(--text-main)"};font-size:14px;line-height:1.4;">
           ${esc(m.text)}
+          ${attachments}
           <div style="font-size:10px;opacity:0.75;margin-top:4px;">${esc(timeAgo(m.time))}</div>
         </div>
+      </div>
+    `;
+  }
+
+  function proposalBubbleHTML(message, me) {
+    const proposal = window.Store.state.proposals.find((entry) => entry.id === message.proposalId);
+    if (!proposal) return bubbleHTML({ ...message, type: "message" }, me);
+    const mine = message.from === me.id;
+    const date = proposal.date
+      ? new Date(`${proposal.date}T00:00:00`).toLocaleDateString("pt-BR")
+      : "";
+    const value = Number(proposal.value);
+    return `
+      <div style="display:flex;justify-content:${mine ? "flex-end" : "flex-start"};">
+        <article class="proposal-message" data-testid="proposal-message">
+          <strong><i class="ph ph-paper-plane-tilt"></i> Proposta de show</strong>
+          <span><i class="ph ph-calendar-blank"></i> ${esc(date)} · ${esc(proposal.time || "")}</span>
+          ${proposal.duration ? `<span><i class="ph ph-clock"></i> ${esc(proposal.duration)} min</span>` : ""}
+          ${Number.isFinite(value) && value > 0 ? `<span><i class="ph ph-currency-circle-dollar"></i> ${esc(new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value))}</span>` : ""}
+          ${proposal.place ? `<span><i class="ph ph-map-pin"></i> ${esc(proposal.place)}</span>` : ""}
+          ${proposal.notes ? `<p>${esc(proposal.notes)}</p>` : ""}
+          <small>${esc(timeAgo(message.time))}</small>
+        </article>
       </div>
     `;
   }
@@ -160,13 +195,60 @@
   function wireChat(root, me) {
     const btn = document.querySelector('[data-action="send"]');
     const input = document.getElementById("msg-input");
-    if (!btn || !input) return;
-    const send = () => {
+    const fileInput = document.getElementById("chat-file-input");
+    const attachButton = root.querySelector('[data-testid="chat-attach-btn"]');
+    const fileList = document.getElementById("chat-file-list");
+    if (!btn || !input || !fileInput || !attachButton || !fileList) return;
+    const selectedFiles = [];
+    const maxAttachmentBytes = 2 * 1024 * 1024;
+    const renderFiles = () => {
+      fileList.hidden = selectedFiles.length === 0;
+      fileList.innerHTML = selectedFiles.map((file, index) => `
+        <span class="chat-file-chip"><i class="ph ph-file"></i>${esc(file.name)}
+          <button type="button" class="btn-icon" aria-label="Remover ${esc(file.name)}" data-remove-chat-file="${index}"><i class="ph ph-x"></i></button>
+        </span>
+      `).join("");
+    };
+    const readFile = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ name: file.name, type: file.type || "application/octet-stream", data: reader.result, size: file.size });
+      reader.onerror = () => reject(new Error(`Não foi possível ler ${file.name}.`));
+      reader.readAsDataURL(file);
+    });
+    attachButton.onclick = () => fileInput.click();
+    fileInput.onchange = () => {
+      const incoming = Array.from(fileInput.files || []);
+      const totalSize = [...selectedFiles, ...incoming].reduce((total, file) => total + file.size, 0);
+      if (totalSize > maxAttachmentBytes) {
+        window.UI.toast("Os anexos da mensagem podem ter até 2 MB no total.", { type: "error" });
+        fileInput.value = "";
+        return;
+      }
+      selectedFiles.push(...incoming);
+      renderFiles();
+      fileInput.value = "";
+    };
+    fileList.onclick = (event) => {
+      const remove = event.target.closest("[data-remove-chat-file]");
+      if (!remove) return;
+      selectedFiles.splice(Number(remove.dataset.removeChatFile), 1);
+      renderFiles();
+    };
+    const send = async () => {
       const text = input.value.trim();
-      if (!text) return;
+      if (!text && !selectedFiles.length) return;
       const convId = btn.dataset.convId;
-      window.Store.sendMessage(convId, text);
+      let attachments;
+      try {
+        attachments = await Promise.all(selectedFiles.map(readFile));
+      } catch (error) {
+        window.UI.toast(error.message, { type: "error" });
+        return;
+      }
+      window.Store.sendMessage(convId, text, attachments);
       input.value = "";
+      selectedFiles.length = 0;
+      renderFiles();
       const c = window.Store.state.conversations.find((x) => x.id === convId);
       document.getElementById("messages-scroll").innerHTML = c.messages.map((m) => window.Views._msgBubble ? window.Views._msgBubble(m, me) : bubbleHTML(m, me)).join("");
       scrollChatToBottom();

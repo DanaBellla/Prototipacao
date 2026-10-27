@@ -6,6 +6,10 @@
     const quotes = [
       { text: "A música pode mudar o mundo porque pode mudar as pessoas.", author: "Bono, vocalista do U2" },
       { text: "A música é uma revelação superior a toda sabedoria e filosofia.", author: "Ludwig van Beethoven" },
+      { text: "Sem música, a vida seria um erro.", author: "Friedrich Nietzsche" },
+      { text: "A música é a abreviação da emoção", author: "Leo Tolstói" },
+      { text: "O rock é a ideia da eterna juventude", author: "Cazuza" },
+      { text: "A música pode mudar o mundo e muda com o mundo", author: "Gilberto Gil" },
     ];
     const quote = quotes[Math.floor(Math.random() * quotes.length)];
     return `
@@ -138,8 +142,16 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Gêneros musicais (separe por vírgula)</label>
-          <input name="genres" data-testid="reg-genres-input" placeholder="Ex.: MPB, Bossa, Indie" />
+          <label>Gêneros musicais (até 5)</label>
+          ${window.UI.genreSelectorHTML()}
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Cachê médio</label><input name="cache" placeholder="Ex.: R$ 1.200" /></div>
+          <div class="form-group"><label>Duração média</label><input name="duration" placeholder="Ex.: 60 min" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Instagram</label><input name="instagram" placeholder="@seuperfil" /></div>
+          <div class="form-group"><label>Spotify</label><input name="spotify" placeholder="Artista ou link do perfil" /></div>
         </div>
         `
         : role === "venue"
@@ -158,6 +170,13 @@
             <option>Evento</option>
             <option>Outro</option>
           </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Endereço</label><input name="address" placeholder="Rua, número e bairro" /></div>
+          <div class="form-group"><label>Capacidade</label><input type="number" name="capacity" min="1" placeholder="Pessoas" /></div>
+        </div>
+        <div class="form-group">
+          <label>Instagram</label><input name="instagram" placeholder="@seuestabelecimento" />
         </div>
         `
         : `
@@ -183,9 +202,46 @@
           </div>
           <div class="form-group">
             <label>Estado</label>
-            <input name="state" maxlength="2" data-testid="reg-state-input" placeholder="Ex.: SP" />
+            <select name="state" data-testid="reg-state-input">${window.UI.stateOptions()}</select>
           </div>
         </div>
+        <section class="register-profile-section" data-testid="register-profile-section">
+          <h2>Personalize seu perfil</h2>
+          <p class="text-muted">Adicione uma apresentação e imagens. Você poderá alterar tudo depois.</p>
+          <div class="form-group">
+            <label>Biografia</label>
+            <textarea name="bio" rows="3" maxlength="500" placeholder="Conte um pouco sobre você, sua banda ou seu espaço."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Foto do perfil</label>
+              <input type="file" name="avatarFile" accept="image/*" data-testid="reg-avatar-input" />
+              ${window.UI.imagePositionHTML("avatarFile", "./images/default-avatar.svg", {}, "foto do perfil")}
+            </div>
+            <div class="form-group">
+              <label>Foto de capa</label>
+              <input type="file" name="coverFile" accept="image/*" data-testid="reg-cover-input" />
+              ${window.UI.imagePositionHTML("coverFile", role === "musician"
+                ? "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=1600"
+                : role === "venue"
+                  ? "https://images.unsplash.com/photo-1651511806003-30e8a55b5fce?w=1600"
+                  : "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=1600", {}, "foto de capa")}
+            </div>
+          </div>
+          ${(role === "musician" || role === "venue") ? `
+            <div class="form-group">
+              <label>Imagens ${role === "venue" ? "do estabelecimento" : "da banda"} (até 6)</label>
+              <input type="file" name="galleryFiles" accept="image/*" multiple data-testid="reg-gallery-input" />
+              <div class="profile-gallery-editor" data-gallery-editor data-testid="reg-gallery-preview"></div>
+            </div>
+          ` : ""}
+          ${role === "venue" ? `
+            <div class="form-group">
+              <label>Horários de funcionamento</label>
+              ${window.UI.scheduleEditorHTML()}
+            </div>
+          ` : ""}
+        </section>
         <div class="form-group">
           <label>E-mail *</label>
           <input type="email" name="email" required data-testid="reg-email-input" placeholder="voce@email.com" />
@@ -206,8 +262,49 @@
 
     const form = app.querySelector("#register-form");
     const err = app.querySelector("#reg-error");
-    form.addEventListener("submit", (e) => {
+    const genreSelector = form.querySelector("[data-genre-selector]");
+    if (genreSelector) window.UI.wireGenreSelector(genreSelector);
+    ["avatarFile", "coverFile"].forEach((field) => window.UI.wireImageAdjustment(form, field));
+    const scheduleEditor = form.querySelector("[data-schedule-editor]");
+    if (scheduleEditor) window.UI.wireScheduleEditor(scheduleEditor);
+    const galleryEditor = form.querySelector("[data-gallery-editor]");
+    const galleryInput = form.querySelector('[name="galleryFiles"]');
+    const galleryFiles = [];
+    if (galleryInput && galleryEditor) {
+      galleryInput.addEventListener("change", async () => {
+        const incoming = Array.from(galleryInput.files || []);
+        if (galleryFiles.length + incoming.length > 6) {
+          window.UI.toast("Você pode adicionar até 6 imagens.", { type: "error" });
+          galleryInput.value = "";
+          return;
+        }
+        try {
+          const newFiles = await Promise.all(incoming.map(async (file) => {
+            if (!file.type.startsWith("image/") || file.size > 1024 * 1024) throw new Error("Cada imagem deve ser válida e ter até 1 MB.");
+            return { name: file.name, data: await window.UI.readImageFile(file), position: { x: 50, y: 50 } };
+          }));
+          const currentBytes = galleryFiles.reduce((total, item) => total + item.size, 0);
+          const incomingBytes = incoming.reduce((total, file) => total + file.size, 0);
+          if (currentBytes + incomingBytes > 3 * 1024 * 1024) throw new Error("As imagens da galeria podem ter até 3 MB no total.");
+          newFiles.forEach((item, index) => { item.size = incoming[index].size; });
+          galleryFiles.push(...newFiles);
+          renderGalleryPreview(galleryEditor, galleryFiles);
+        } catch (error) {
+          window.UI.toast(error.message, { type: "error" });
+        }
+        galleryInput.value = "";
+      });
+      galleryEditor.addEventListener("click", (event) => {
+        const remove = event.target.closest("[data-remove-gallery]");
+        if (!remove) return;
+        galleryFiles.splice(Number(remove.dataset.removeGallery), 1);
+        renderGalleryPreview(galleryEditor, galleryFiles);
+      });
+    }
+
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!form.reportValidity()) return;
       const fd = new FormData(form);
       const data = Object.fromEntries(fd.entries());
       if (!data.email || !data.password) {
@@ -220,7 +317,30 @@
         err.style.display = "block";
         return;
       }
-      if (data.genres) data.genres = data.genres.split(",").map((s) => s.trim()).filter(Boolean);
+      data.genres = genreSelector ? window.UI.readGenres(genreSelector) : [];
+      try {
+        const readUpload = async (field) => {
+          const file = form.elements[field].files[0];
+          return file ? window.UI.readImageFile(file) : "";
+        };
+        data.avatar = await readUpload("avatarFile");
+        data.cover = await readUpload("coverFile");
+        delete data.avatarFile;
+        delete data.coverFile;
+        delete data.galleryFiles;
+      } catch (error) {
+        err.textContent = error.message;
+        err.style.display = "block";
+        return;
+      }
+      data.avatarPosition = readImagePosition(form, "avatarFile");
+      data.coverPosition = readImagePosition(form, "coverFile");
+      data.gallery = galleryFiles.map((item) => item.data);
+      data.galleryPositions = galleryFiles.map((item) => item.position);
+      if (scheduleEditor) {
+        data.openingSchedule = window.UI.readOpeningSchedule(scheduleEditor);
+        data.hours = window.UI.openingHoursSummary(data.openingSchedule);
+      }
       const res = window.Store.register(data);
       if (res.error) {
         err.textContent = res.error;
@@ -229,6 +349,26 @@
       }
       toast(`Bem-vindo(a), ${res.user.name || "artista"}!`, { type: "success", title: "Conta criada" });
       location.hash = "#/feed";
+    });
+  }
+
+  function readImagePosition(root, field) {
+    const adjustment = root.querySelector(`[data-image-adjustment="${field}"]`);
+    return {
+      x: Number(adjustment.querySelector('[data-image-axis="x"]').value),
+      y: Number(adjustment.querySelector('[data-image-axis="y"]').value),
+    };
+  }
+
+  function renderGalleryPreview(container, files) {
+    container.innerHTML = files.map((item, index) => `
+      <div class="gallery-editor-item">
+        ${window.UI.imageCropHTML(item.data, item.position, item.name, "gallery-image-crop")}
+        <button type="button" class="btn-icon" data-remove-gallery="${index}" aria-label="Remover ${esc(item.name)}"><i class="ph ph-x"></i></button>
+      </div>
+    `).join("");
+    container.querySelectorAll("[data-image-crop-widget]").forEach((widget, index) => {
+      window.UI.wireImageCrop(widget, (position) => { files[index].position = position; });
     });
   }
 

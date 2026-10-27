@@ -12,7 +12,7 @@
             </a>
             <nav class="landing-nav-links">
               <a href="#como-funciona" data-testid="nav-how">Como funciona</a>
-              <a href="#depoimentos" data-testid="nav-testimonials">Depoimentos</a>
+              <a href="#entrevistas" data-testid="nav-interviews">Entrevistas</a>
               <a href="#faq" data-testid="nav-faq">FAQ</a>
             </nav>
             <div class="landing-nav-actions">
@@ -32,7 +32,8 @@
                 <i class="ph-fill ph-sparkle"></i> A nova casa da música ao vivo
               </span>
               <h1 data-testid="hero-title">
-                Sistema de conexão entre músicos, ouvintes e estabelecimentos.
+                A música ao vivo <span class="hl">conecta.</span><br />
+                A gente aproxima.
               </h1>
               <p class="lead" data-testid="hero-lead">
                 Descubra artistas, agende shows e viva noites inesquecíveis.
@@ -47,22 +48,9 @@
                   Como funciona
                 </a>
               </div>
-              <div class="hero-stats" data-testid="hero-stats">
-                <div class="hero-stat"><div class="num">12k+</div><div class="lbl">Músicos ativos</div></div>
-                <div class="hero-stat"><div class="num">3.4k</div><div class="lbl">Casas parceiras</div></div>
-                <div class="hero-stat"><div class="num">890</div><div class="lbl">Shows por semana</div></div>
-              </div>
             </div>
             <div class="hero-visual">
               <img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1400" alt="Público acompanhando um show ao vivo" />
-              <div class="hero-floating fl-1">
-                <div class="avatar"><i class="ph-fill ph-guitar"></i></div>
-                <div class="txt"><strong>Luna Vieira</strong><span>Confirmada · Sex 22h</span></div>
-              </div>
-              <div class="hero-floating fl-2">
-                <div class="avatar"><i class="ph-fill ph-storefront"></i></div>
-                <div class="txt"><strong>Bar Aurora</strong><span>Nova proposta enviada</span></div>
-              </div>
             </div>
           </div>
         </section>
@@ -109,43 +97,29 @@
           </div>
         </section>
 
-        <section id="depoimentos" class="section" style="background: var(--bg-surface);">
+        <section id="entrevistas" class="section" style="background: var(--bg-surface);">
           <div class="container">
             <div class="section-head">
-              <span class="eyebrow">Depoimentos</span>
-              <h2>Feito com quem faz a cena acontecer.</h2>
+              <span class="eyebrow">Entrevistas</span>
+              <h2>Histórias de quem vive a música ao vivo.</h2>
+              <p>Novas conversas com a comunidade em breve.</p>
             </div>
-            <div class="testi-grid">
-              <div class="testi-card">
-                <div class="testi-stars">
-                  <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i>
-                </div>
-                <p>"Em duas semanas fechei quatro shows novos. A plataforma me deu uma vitrine que eu não tinha."</p>
-                <div class="testi-who">
-                  <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200" alt="Luna" />
-                  <div><strong>Luna Vieira</strong><span>Cantora · São Paulo</span></div>
-                </div>
-              </div>
-              <div class="testi-card">
-                <div class="testi-stars">
-                  <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i>
-                </div>
-                <p>"Nossa agenda de sexta a domingo virou completa. É simples achar bandas com o perfil da casa."</p>
-                <div class="testi-who">
-                  <img src="https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=200" alt="Bar Aurora" />
-                  <div><strong>Bar Aurora</strong><span>Vila Madalena, SP</span></div>
-                </div>
-              </div>
-              <div class="testi-card">
-                <div class="testi-stars">
-                  <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i>
-                </div>
-                <p>"Descubro banda nova toda semana e sei exatamente onde encontrar. Virei fã de várias cenas locais."</p>
-                <div class="testi-who">
-                  <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200" alt="Marina" />
-                  <div><strong>Marina Costa</strong><span>Ouvinte · SP</span></div>
-                </div>
-              </div>
+            <div class="interview-grid">
+              <article class="interview-card">
+                <span class="interview-icon"><i class="ph ph-microphone-stage"></i></span>
+                <h3>Músico</h3>
+                <p>Entrevista em breve</p>
+              </article>
+              <article class="interview-card">
+                <span class="interview-icon"><i class="ph ph-storefront"></i></span>
+                <h3>Estabelecimento</h3>
+                <p>Entrevista em breve</p>
+              </article>
+              <article class="interview-card">
+                <span class="interview-icon"><i class="ph ph-headphones"></i></span>
+                <h3>Ouvinte</h3>
+                <p>Entrevista em breve</p>
+              </article>
             </div>
           </div>
         </section>

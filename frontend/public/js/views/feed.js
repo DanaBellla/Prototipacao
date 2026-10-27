@@ -11,7 +11,7 @@
       <div>
         ${suggestions.map((u) => `
           <div class="suggestion" data-testid="suggestion-${u.id}">
-            <img src="${esc(u.avatar)}" alt="${esc(u.name)}" />
+            <img src="${esc(u.avatar)}" alt="${esc(u.name)}" style="object-position:${Number.isFinite(Number(u.avatarPosition?.x)) ? Number(u.avatarPosition.x) : 50}% ${Number.isFinite(Number(u.avatarPosition?.y)) ? Number(u.avatarPosition.y) : 50}%;" />
             <div class="info" data-nav="#/profile/${u.id}" style="cursor:pointer">
               <strong>${esc(u.name)}</strong>
               <span>${esc(u.city || "")} · ${esc(window.Shell.roleLabel(u.role))}</span>
@@ -56,7 +56,12 @@
     const attachments = p.attachments || [];
     const media = images.length || attachments.length
       ? `<div class="post-media" data-testid="post-media-${p.id}">
-           ${images.map((src) => `<img src="${esc(src)}" alt="Imagem do post de ${esc(author.name)}" loading="lazy" />`).join("")}
+           ${images.map((src, index) => {
+             const position = (p.imagePositions || [])[index] || {};
+             const x = Number.isFinite(Number(position.x)) ? Number(position.x) : 50;
+             const y = Number.isFinite(Number(position.y)) ? Number(position.y) : 50;
+             return `<img src="${esc(src)}" alt="Imagem do post de ${esc(author.name)}" style="object-position:${x}% ${y}%;" loading="lazy" />`;
+           }).join("")}
            ${attachments.map((file) => `<a class="post-file" href="${esc(file.data)}" download="${esc(file.name)}"><i class="ph ph-file-arrow-down"></i><span>${esc(file.name)}</span></a>`).join("")}
          </div>`
       : "";
@@ -64,7 +69,7 @@
     return `
       <article class="post" data-testid="post-${p.id}">
         <header class="post-head">
-          <img src="${esc(author.avatar)}" alt="${esc(author.name)}" data-nav="#/profile/${author.id}" style="cursor:pointer" />
+          <img src="${esc(author.avatar)}" alt="${esc(author.name)}" data-nav="#/profile/${author.id}" style="object-position:${Number.isFinite(Number(author.avatarPosition?.x)) ? Number(author.avatarPosition.x) : 50}% ${Number.isFinite(Number(author.avatarPosition?.y)) ? Number(author.avatarPosition.y) : 50}%;cursor:pointer" />
           <div class="info">
             <strong data-nav="#/profile/${author.id}">
               ${esc(author.name)}
@@ -110,7 +115,7 @@
     const posts = window.Store.state.posts;
     const composer = window.Store.canCreatePost() ? `
       <div class="composer">
-        <img src="${esc(u.avatar)}" alt="Você" />
+        <img src="${esc(u.avatar)}" alt="Você" style="object-position:${Number.isFinite(Number(u.avatarPosition?.x)) ? Number(u.avatarPosition.x) : 50}% ${Number.isFinite(Number(u.avatarPosition?.y)) ? Number(u.avatarPosition.y) : 50}%;" />
         <input placeholder="Compartilhe algo com a comunidade..." data-testid="composer-input" id="composer-input" />
         <div class="composer-actions">
           <input type="file" accept="image/*" multiple hidden data-testid="composer-image-input" />
@@ -151,14 +156,20 @@
         ];
         preview.hidden = items.length === 0;
         preview.innerHTML = items.map((item) => item.kind === "image"
-          ? `<div class="composer-attachment"><img src="${item.data}" alt="${esc(item.name)}" /><button type="button" class="btn-icon" aria-label="Remover ${esc(item.name)}" data-remove-kind="image" data-remove-index="${item.index}"><i class="ph ph-x"></i></button></div>`
+          ? `<div class="composer-image-adjustment ${items.length === 1 ? "single-crop" : ""}">
+               ${window.UI.imageCropHTML(item.data, item.position, item.name, "composer-image-crop")}
+               <button type="button" class="btn-icon" aria-label="Remover ${esc(item.name)}" data-remove-kind="image" data-remove-index="${item.index}"><i class="ph ph-x"></i></button>
+             </div>`
           : `<div class="composer-attachment-file"><i class="ph ph-file"></i><span>${esc(item.name)}</span><button type="button" class="btn-icon" aria-label="Remover ${esc(item.name)}" data-remove-kind="file" data-remove-index="${item.index}"><i class="ph ph-x"></i></button></div>`
         ).join("");
+        preview.querySelectorAll(".composer-image-crop").forEach((widget, index) => {
+          window.UI.wireImageCrop(widget, (position) => { selectedImages[index].position = position; });
+        });
       };
 
       const readFile = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result, size: file.size });
+        reader.onload = () => resolve({ name: file.name, type: file.type, data: reader.result, size: file.size, position: { x: 50, y: 50 } });
         reader.onerror = () => reject(new Error("Não foi possível ler o arquivo."));
         reader.readAsDataURL(file);
       });
@@ -270,6 +281,7 @@
         const post = window.Store.createPost({
           caption,
           images: selectedImages.map((item) => item.data),
+          imagePositions: selectedImages.map((item) => item.position),
           attachments: selectedFiles.map(({ name, type, data }) => ({ name, type, data })),
           location: (window.Store.currentUser().city || "") + (window.Store.currentUser().state ? ", " + window.Store.currentUser().state : ""),
         });

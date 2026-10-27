@@ -152,9 +152,21 @@
         state: payload.state || "",
         avatar: payload.avatar || defaultAvatars[payload.role] || defaultAvatars.listener,
         cover: payload.cover || defaultCovers[payload.role] || defaultCovers.listener,
+        avatarPosition: payload.avatarPosition || { x: 50, y: 50 },
+        coverPosition: payload.coverPosition || { x: 50, y: 50 },
         bio: payload.bio || "",
-        genres: payload.genres || [],
+        genres: (payload.genres || []).slice(0, 5),
         category: payload.category || "",
+        address: payload.address || "",
+        capacity: Number(payload.capacity) || 0,
+        cache: payload.cache || "",
+        duration: payload.duration || "",
+        instagram: payload.instagram || "",
+        spotify: payload.spotify || "",
+        hours: payload.hours || "",
+        openingSchedule: payload.openingSchedule || [],
+        gallery: (payload.gallery || []).slice(0, 6),
+        galleryPositions: (payload.galleryPositions || []).slice(0, 6),
         followers: 0,
         shows: 0,
         rating: 0,
@@ -225,7 +237,8 @@
       const sender = this.currentUser();
       const target = this.userById(targetUserId);
       return !!sender && !!target && sender.id !== target.id &&
-        sender.role === "venue" && target.role === "musician";
+        ((sender.role === "venue" && target.role === "musician") ||
+          (sender.role === "musician" && target.role === "venue"));
     },
 
     toggleLike(postId) {
@@ -260,6 +273,7 @@
         time: new Date().toISOString(),
         image: payload.images?.[0] || payload.image || "",
         images: payload.images || (payload.image ? [payload.image] : []),
+        imagePositions: payload.imagePositions || [],
         attachments: payload.attachments || [],
         caption: payload.caption || "",
         hashtags: (payload.caption || "").match(/#\w+/g) || [],
@@ -325,11 +339,16 @@
       }
       return c;
     },
-    sendMessage(convId, text) {
+    sendMessage(convId, text, attachments = []) {
       const me = state.currentUserId;
       const c = state.conversations.find((x) => x.id === convId);
-      if (!c || !text.trim()) return;
-      c.messages.push({ from: me, text: text.trim(), time: new Date().toISOString() });
+      if (!c || (!text.trim() && !attachments.length)) return;
+      c.messages.push({
+        from: me,
+        text: text.trim(),
+        attachments,
+        time: new Date().toISOString(),
+      });
       persist();
       // Simulate reply after a bit
       const other = c.participants.find((p) => p !== me);
@@ -392,6 +411,8 @@
     // Proposals
     saveProposal(prop) {
       if (!this.canSendProposal(prop.targetUserId)) return null;
+      const conversation = this.getOrCreateConversation(prop.targetUserId);
+      if (!conversation) return null;
       const p = {
         ...prop,
         fromUserId: state.currentUserId,
@@ -400,6 +421,13 @@
         createdAt: new Date().toISOString(),
       };
       state.proposals.push(p);
+      conversation.messages.push({
+        from: p.fromUserId,
+        type: "proposal",
+        proposalId: p.id,
+        text: `Proposta de show · ${p.date} às ${p.time}`,
+        time: p.createdAt,
+      });
       // Send notification to target
       state.notifications.unshift({
         id: "n_" + Date.now(),

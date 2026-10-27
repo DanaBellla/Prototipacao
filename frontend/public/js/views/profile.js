@@ -56,6 +56,81 @@
     return date;
   }
 
+  function imagePosition(position = {}) {
+    const x = Number(position.x);
+    const y = Number(position.y);
+    return { x: Number.isFinite(x) ? x : 50, y: Number.isFinite(y) ? y : 50 };
+  }
+
+  function imageAdjustmentHTML(field, src, position, label) {
+    const point = imagePosition(position);
+    return `
+      <div class="image-adjustment ${field === "cover" ? "image-adjustment-cover" : ""}" data-image-adjustment="${field}">
+        <div class="image-crop-frame" data-image-crop tabindex="0" role="group" aria-label="Arraste para ajustar a posição da ${esc(label)}; use as setas do teclado para ajustes finos.">
+          <img src="${esc(src || "")}" alt="Prévia de ${esc(label)}" data-image-preview="${field}" draggable="false" style="object-position:${point.x}% ${point.y}%;" />
+        </div>
+        <span class="image-crop-instruction">Arraste a imagem para ajustar</span>
+        <div class="image-crop-actions">
+          <button type="button" class="btn-ghost btn-sm" data-image-reset>Centralizar</button>
+        </div>
+        <input type="hidden" min="0" max="100" value="${point.x}" data-image-axis="x" aria-label="Posição horizontal de ${esc(label)}" />
+        <input type="hidden" min="0" max="100" value="${point.y}" data-image-axis="y" aria-label="Posição vertical de ${esc(label)}" />
+      </div>
+    `;
+  }
+
+  function renderVenueSchedule(user, events, editable = false) {
+    const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const openingHours = String(user.hours || "");
+    const match = openingHours.match(/\b(Dom|Seg|Ter|Qua|Qui|Sex|Sáb)\s*[–-]\s*(Dom|Seg|Ter|Qua|Qui|Sex|Sáb)\s*[·,]\s*(.+)/i);
+    const openDays = new Set();
+    let hours = openingHours || "Horários não informados";
+
+    if (match) {
+      const start = weekdays.findIndex((day) => day.toLowerCase() === match[1].toLowerCase());
+      const end = weekdays.findIndex((day) => day.toLowerCase() === match[2].toLowerCase());
+      for (let day = start; ; day = (day + 1) % weekdays.length) {
+        openDays.add(day);
+        if (day === end) break;
+      }
+      hours = match[3];
+    }
+
+    const dayRows = Array.isArray(user.openingSchedule) && user.openingSchedule.length
+      ? weekdays.map((day) => {
+          const item = user.openingSchedule.find((entry) => entry.day === day);
+          const isOpen = item && !item.closed;
+          return `<div class="venue-schedule-day ${isOpen ? "is-open" : ""}"><span>${day}</span><span>${isOpen ? `${esc(item.open)}–${esc(item.close)}` : "Fechado"}</span></div>`;
+        }).join("")
+      : match
+      ? weekdays.map((day, index) => `
+          <div class="venue-schedule-day ${openDays.has(index) ? "is-open" : ""}">
+            <span>${day}</span><span>${openDays.has(index) ? esc(hours) : "Fechado"}</span>
+          </div>
+        `).join("")
+      : `<div class="venue-schedule-day"><span>Funcionamento</span><span>${esc(hours)}</span></div>`;
+    const showRows = events.length
+      ? events.map((event) => `
+          <div class="venue-schedule-show">
+            <span class="venue-schedule-show-date">${esc(event.date || eventSortDate(event).toLocaleDateString("pt-BR"))} ${esc(event.time || "")}</span>
+            <span>${esc(event.title)}</span>
+            ${editable && window.Store.canManageEvent(event) ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-venue-show="${esc(event.id)}">Editar show</button>` : ""}
+          </div>
+        `).join("")
+      : `<p class="text-muted venue-schedule-empty">Nenhum show programado.</p>`;
+
+    return `
+      <section class="venue-schedule" data-testid="venue-schedule">
+        <div class="venue-schedule-heading">
+          <h3>Horários e shows</h3>
+          ${editable ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-venue-schedule>Editar horários</button>` : ""}
+        </div>
+        <div class="venue-schedule-days">${dayRows}</div>
+        <div class="venue-schedule-shows">${showRows}</div>
+      </section>
+    `;
+  }
+
   function renderProfile(app, params = {}) {
     if (!window.Auth.require()) return;
     const s = window.Store.state;
@@ -87,7 +162,7 @@
 
     const primaryCTA = isOwn
       ? `<button class="btn btn-ghost" data-testid="edit-profile-btn"><i class="ph ph-pencil-simple"></i> Editar perfil</button>`
-      : currentUser.role === "venue" && isMusician
+      : (currentUser.role === "venue" && isMusician) || (currentUser.role === "musician" && isVenue)
       ? `<button class="btn btn-primary" data-action="send-proposal" data-testid="send-proposal-btn"><i class="ph ph-paper-plane-tilt"></i> Enviar Proposta</button>${followCTA}`
       : followCTA;
 
@@ -147,7 +222,10 @@
 
     const gallery = (user.gallery || []).length
       ? `<div class="gallery" data-testid="profile-gallery">
-           ${user.gallery.map((src) => `<img src="${esc(src)}" alt="Galeria de ${esc(user.name)}" loading="lazy" />`).join("")}
+           ${user.gallery.map((src, index) => {
+             const position = imagePosition((user.galleryPositions || [])[index]);
+             return `<img src="${esc(src)}" alt="Galeria de ${esc(user.name)}" style="object-position:${position.x}% ${position.y}%;" loading="lazy" />`;
+           }).join("")}
          </div>`
       : "";
 
@@ -158,9 +236,10 @@
            <div class="profile-post-grid">
              ${userPosts.map((post) => {
                const images = post.images || (post.image ? [post.image] : []);
+               const imagePositions = post.imagePositions || [];
                const files = post.attachments || [];
                return `<article class="profile-post" data-testid="profile-post-${esc(post.id)}">
-                 ${images.length ? `<img class="profile-post-image" src="${esc(images[0])}" alt="Imagem publicada por ${esc(user.name)}" loading="lazy" />` : `<div class="profile-post-file-cover"><i class="ph ph-file"></i>${files.length ? esc(files.length) + " arquivo(s)" : "Publicação"}</div>`}
+                 ${images.length ? `<img class="profile-post-image" src="${esc(images[0])}" alt="Imagem publicada por ${esc(user.name)}" style="object-position:${imagePosition(imagePositions[0]).x}% ${imagePosition(imagePositions[0]).y}%;" loading="lazy" />` : `<div class="profile-post-file-cover"><i class="ph ph-file"></i>${files.length ? esc(files.length) + " arquivo(s)" : "Publicação"}</div>`}
                  <p>${esc(post.caption || "")}</p>
                  ${files.map((file) => `<a class="profile-post-file" href="${esc(file.data)}" download="${esc(file.name)}"><i class="ph ph-download-simple"></i>${esc(file.name)}</a>`).join("")}
                </article>`;
@@ -172,7 +251,7 @@
     const ownedEvents = s.events
       .filter((event) => isMusician ? event.artistId === user.id : isVenue && event.venueId === user.id)
       .sort((a, b) => eventSortDate(a) - eventSortDate(b));
-    const upcoming = ownedEvents.length
+    const musicianUpcoming = ownedEvents.length
       ? `<div class="upcoming-shows" data-testid="upcoming-shows">
            <h3>Próximos shows</h3>
            ${ownedEvents.map((event) => `
@@ -195,12 +274,15 @@
            `).join("")}
          </div>`
       : `<div class="upcoming-shows"><h3>Próximos shows</h3><p class="text-muted" style="font-size:14px;margin:0;">Nenhum show confirmado no momento.</p></div>`;
+    const profileSchedule = isVenue
+      ? renderVenueSchedule(user, ownedEvents, isOwn)
+      : isMusician ? musicianUpcoming : "";
 
     const main = `
       <div data-testid="profile-view">
         <div class="profile-hero">
-          <div class="profile-cover" style="background-image:url('${esc(user.cover || user.avatar)}');"></div>
-          <img class="profile-avatar" src="${esc(user.avatar)}" alt="${esc(user.name)}" />
+          <div class="profile-cover" style="background-image:url('${esc(user.cover || user.avatar)}');background-position:${imagePosition(user.coverPosition).x}% ${imagePosition(user.coverPosition).y}%;"></div>
+          <img class="profile-avatar" src="${esc(user.avatar)}" alt="${esc(user.name)}" style="object-position:${imagePosition(user.avatarPosition).x}% ${imagePosition(user.avatarPosition).y}%;" />
           <div class="profile-info">
             <div class="name-block">
               <h1 data-testid="profile-name">${esc(user.artistName || user.name)}</h1>
@@ -244,7 +326,7 @@
             ${postsSection}
           </div>
           <div>
-            ${upcoming}
+            ${profileSchedule}
           </div>
         </div>
       </div>
@@ -259,7 +341,7 @@
     root.querySelectorAll('[data-action="send-proposal"]').forEach((b) =>
       b.addEventListener("click", () => {
         if (!window.Store.canSendProposal(user.id)) {
-          window.UI.toast("Somente estabelecimentos podem enviar propostas para músicos.", { type: "error" });
+          window.UI.toast("Não é possível enviar uma proposta para este perfil.", { type: "error" });
           return;
         }
         openProposalModal(user);
@@ -295,6 +377,12 @@
     );
     root.querySelectorAll("[data-profile-event-id]").forEach((button) =>
       button.addEventListener("click", () => window.openEventModal(button.dataset.profileEventId))
+    );
+    root.querySelectorAll("[data-edit-venue-show]").forEach((button) =>
+      button.addEventListener("click", () => window.openEventEditor(button.dataset.editVenueShow))
+    );
+    root.querySelectorAll("[data-edit-venue-schedule]").forEach((button) =>
+      button.addEventListener("click", () => openEditProfileModal(root, user))
     );
   }
 
@@ -334,12 +422,33 @@
         </div>
         ${user.role === "musician" ? `<div class="form-row">
           <div class="form-group"><label>Banda</label><input name="bandName" value="${esc(user.bandName || "")}" /></div>
-          <div class="form-group"><label>Gêneros musicais</label><input name="genres" value="${esc((user.genres || []).join(", "))}" placeholder="MPB, Rock, Jazz" /></div>
+          <div class="form-group"><label>Gêneros musicais (até 5)</label>${window.UI.genreSelectorHTML(user.genres || [])}</div>
         </div>` : ""}
+        ${user.role === "venue" ? `
+          <div class="form-row">
+            <div class="form-group"><label>Categoria</label><input name="category" value="${esc(user.category || "")}" /></div>
+            <div class="form-group"><label>Capacidade</label><input type="number" min="1" name="capacity" value="${esc(user.capacity || "")}" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Endereço</label><input name="address" value="${esc(user.address || "")}" /></div>
+            <div class="form-group"><label>Instagram</label><input name="instagram" value="${esc(user.instagram || "")}" /></div>
+          </div>
+          <div class="form-group">
+            <label>Horários de funcionamento</label>
+            ${window.UI.scheduleEditorHTML(user.openingSchedule || [], user.hours || "")}
+          </div>
+        ` : ""}
+        ${(user.role === "venue" || user.role === "musician") ? `
+          <div class="form-group">
+            <label>Imagens ${user.role === "venue" ? "do estabelecimento" : "da banda"} (até 6)</label>
+            <input type="file" name="galleryFiles" accept="image/*" multiple data-testid="profile-gallery-input" />
+            <div class="profile-gallery-editor" data-gallery-editor data-testid="profile-gallery-editor"></div>
+          </div>
+        ` : ""}
         <div class="form-group"><label>Biografia</label><textarea name="bio" rows="4" maxlength="500">${esc(user.bio || "")}</textarea></div>
         <div class="form-row">
           <div class="form-group"><label>Cidade</label><input name="city" value="${esc(user.city || "")}" /></div>
-          <div class="form-group"><label>Estado</label><input name="state" value="${esc(user.state || "")}" maxlength="2" /></div>
+          <div class="form-group"><label>Estado</label><select name="state">${window.UI.stateOptions(user.state)}</select></div>
         </div>
         ${user.role === "musician" ? `<div class="form-row">
           <div class="form-group"><label>Cachê médio</label><input name="cache" value="${esc(user.cache || "")}" /></div>
@@ -350,8 +459,14 @@
           <div class="form-group"><label>Spotify</label><input name="spotify" value="${esc(user.spotify || "")}" /></div>
         </div>` : ""}
         <div class="form-row">
-          <div class="form-group"><label>Foto do perfil</label><input type="file" name="avatar" accept="image/*" data-testid="profile-avatar-input" /></div>
-          <div class="form-group"><label>Imagem de capa</label><input type="file" name="cover" accept="image/*" data-testid="profile-cover-input" /></div>
+          <div class="form-group">
+            <label>Foto do perfil</label><input type="file" name="avatar" accept="image/*" data-testid="profile-avatar-input" />
+            ${imageAdjustmentHTML("avatar", user.avatar, user.avatarPosition, "foto do perfil")}
+          </div>
+          <div class="form-group">
+            <label>Imagem de capa</label><input type="file" name="cover" accept="image/*" data-testid="profile-cover-input" />
+            ${imageAdjustmentHTML("cover", user.cover || user.avatar, user.coverPosition, "imagem de capa")}
+          </div>
         </div>
         <p class="text-muted" style="font-size:12px;margin:0;">Imagens de até 1 MB cada.</p>
       </form>
@@ -378,11 +493,37 @@
               city: String(formData.get("city") || "").trim(),
               state: String(formData.get("state") || "").trim().toUpperCase(),
             };
+            const scheduleEditor = form.querySelector("[data-schedule-editor]");
+            if (scheduleEditor) {
+              updates.openingSchedule = window.UI.readOpeningSchedule(scheduleEditor);
+              updates.hours = window.UI.openingHoursSummary(updates.openingSchedule);
+            }
+            if (user.role === "venue") {
+              Object.assign(updates, {
+                category: String(formData.get("category") || "").trim(),
+                address: String(formData.get("address") || "").trim(),
+                capacity: Number(formData.get("capacity")) || 0,
+                instagram: String(formData.get("instagram") || "").trim(),
+              });
+            }
+            if (galleryItems) {
+              updates.gallery = galleryItems.map((item) => item.data);
+              updates.galleryPositions = galleryItems.map((item) => item.position);
+            }
+            const getPosition = (field) => {
+              const adjustment = form.querySelector(`[data-image-adjustment="${field}"]`);
+              return {
+                x: Number(adjustment.querySelector('[data-image-axis="x"]').value),
+                y: Number(adjustment.querySelector('[data-image-axis="y"]').value),
+              };
+            };
+            updates.avatarPosition = getPosition("avatar");
+            updates.coverPosition = getPosition("cover");
             if (user.role === "musician") {
               Object.assign(updates, {
                 artistName: String(formData.get("artistName") || "").trim(),
                 bandName: String(formData.get("bandName") || "").trim(),
-                genres: String(formData.get("genres") || "").split(",").map((genre) => genre.trim()).filter(Boolean),
+                genres: window.UI.readGenres(genreSelector),
                 cache: String(formData.get("cache") || "").trim(),
                 duration: String(formData.get("duration") || "").trim(),
                 instagram: String(formData.get("instagram") || "").trim(),
@@ -408,6 +549,72 @@
           },
         },
       ],
+    });
+    const form = document.querySelector("#edit-profile-form");
+    const genreSelector = form.querySelector("[data-genre-selector]");
+    if (genreSelector) window.UI.wireGenreSelector(genreSelector);
+    const scheduleEditor = form.querySelector("[data-schedule-editor]");
+    if (scheduleEditor) window.UI.wireScheduleEditor(scheduleEditor);
+    ["avatar", "cover"].forEach((field) => {
+      window.UI.wireImageAdjustment(form, field);
+    });
+    const galleryItems = (user.role === "venue" || user.role === "musician")
+      ? (user.gallery || []).slice(0, 6).map((data, index) => ({
+          data,
+          name: `Imagem ${index + 1}`,
+          size: 0,
+          position: imagePosition((user.galleryPositions || [])[index]),
+        }))
+      : null;
+    const galleryEditor = form.querySelector("[data-gallery-editor]");
+    const galleryInput = form.querySelector('[name="galleryFiles"]');
+    if (galleryEditor && galleryInput && galleryItems) {
+      renderGalleryEditor(galleryEditor, galleryItems);
+      galleryInput.addEventListener("change", async () => {
+        const incoming = Array.from(galleryInput.files || []);
+        if (galleryItems.length + incoming.length > 6) {
+          window.UI.toast("Você pode adicionar até 6 imagens.", { type: "error" });
+          galleryInput.value = "";
+          return;
+        }
+        try {
+          const currentBytes = galleryItems.reduce((total, item) => total + item.size, 0);
+          const incomingBytes = incoming.reduce((total, file) => total + file.size, 0);
+          if (currentBytes + incomingBytes > 3 * 1024 * 1024) throw new Error("As imagens da galeria podem ter até 3 MB no total.");
+          for (const file of incoming) {
+            if (!file.type.startsWith("image/") || file.size > 1024 * 1024) throw new Error("Cada imagem deve ser válida e ter até 1 MB.");
+          }
+          const additions = await Promise.all(incoming.map(async (file) => ({
+            data: await window.UI.readImageFile(file),
+            name: file.name,
+            size: file.size,
+            position: { x: 50, y: 50 },
+          })));
+          galleryItems.push(...additions);
+          renderGalleryEditor(galleryEditor, galleryItems);
+        } catch (error) {
+          window.UI.toast(error.message, { type: "error" });
+        }
+        galleryInput.value = "";
+      });
+      galleryEditor.addEventListener("click", (event) => {
+        const remove = event.target.closest("[data-remove-gallery]");
+        if (!remove) return;
+        galleryItems.splice(Number(remove.dataset.removeGallery), 1);
+        renderGalleryEditor(galleryEditor, galleryItems);
+      });
+    }
+  }
+
+  function renderGalleryEditor(container, images) {
+    container.innerHTML = images.map((item, index) => `
+      <div class="gallery-editor-item">
+        ${window.UI.imageCropHTML(item.data, item.position, item.name, "gallery-image-crop")}
+        <button type="button" class="btn-icon" data-remove-gallery="${index}" aria-label="Remover ${esc(item.name)}"><i class="ph ph-x"></i></button>
+      </div>
+    `).join("");
+    container.querySelectorAll("[data-image-crop-widget]").forEach((widget, index) => {
+      window.UI.wireImageCrop(widget, (position) => { images[index].position = position; });
     });
   }
 
@@ -453,13 +660,13 @@
             <input type="number" name="duration" value="60" min="20" data-testid="proposal-duration" />
           </div>
           <div class="form-group">
-            <label>Valor oferecido (R$)</label>
+            <label>${target.role === "venue" ? "Cachê solicitado (R$)" : "Valor oferecido (R$)"}</label>
             <input type="number" name="value" placeholder="1500" data-testid="proposal-value" />
           </div>
         </div>
         <div class="form-group">
-          <label>Endereço / local</label>
-          <input name="place" placeholder="Ex.: Bar Aurora — Vila Madalena" data-testid="proposal-place" />
+          <label>${target.role === "venue" ? "Estabelecimento" : "Endereço / local"}</label>
+          <input name="place" value="${target.role === "venue" ? esc(target.name) : ""}" placeholder="Ex.: Bar Aurora — Vila Madalena" data-testid="proposal-place" />
         </div>
         <div class="form-group">
           <label>Observações</label>
@@ -498,7 +705,7 @@
               notes: fd.get("notes"),
             });
             if (!proposal) {
-              window.UI.toast("Somente estabelecimentos podem enviar propostas para músicos.", { type: "error" });
+              window.UI.toast("Não foi possível enviar a proposta para este perfil.", { type: "error" });
               return;
             }
             close();
